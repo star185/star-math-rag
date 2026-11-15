@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Star Math 智能问答</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css?v=20261103-sig3" />
+  <link rel="stylesheet" href="vendor/katex/katex.min.css" />
+  <script defer src="vendor/katex/katex.min.js"></script>
+</head>
+<body>
+  <!-- Login -->
+  <div id="login-view" class="login-wrap hidden">
+    <!-- 背景淡墨公式装饰（草稿纸氛围） -->
+    <span class="eq e1">lim<sub>x→0</sub> sin x / x = 1</span>
+    <span class="eq e2">f(x) = ∫<sub>0</sub><sup>x</sup> e<sup>−t²</sup> dt</span>
+    <span class="eq e3">∑<sub>k=1</sub><sup>n</sup> k = n(n+1)/2</span>
+    <span class="eq e4">e<sup>iπ</sup> + 1 = 0</span>
+    <span class="eq e5">dy/dx = 2x</span>
+    <span class="eq e6">x² + y² = r²</span>
+    <span class="eq e7">∫ x<sup>n</sup> dx = x<sup>n+1</sup>/(n+1) + C</span>
+    <span class="eq e8">sin²x + cos²x = 1</span>
+    <span class="eq e9">a² + b² = c²</span>
+    <span class="eq e10">e<sup>x</sup> = 1 + x + x²/2! + x³/3! + …</span>
+    <span class="sig int">∫</span>
+    <span class="sig sum">∑</span>
+    <div class="login-card">
+          <div class="login-brand">
+            <div class="logo-dot"><i class="ico" data-lucide="star" data-fb="★"></i></div>
+            <div>
+              <h1>Star Math 智能问答</h1>
+              <p>RAG · 知识库增强生成</p>
+            </div>
+          </div>
+          <div class="tabs">
+            <button class="tab active" data-tab="login">登录</button>
+            <button class="tab" data-tab="register">注册</button>
+          </div>
+          <form id="login-form">
+            <label>用户名<input id="username" autocomplete="username" placeholder="请输入用户名" required /></label>
+            <label>密码<input id="password" type="password" autocomplete="current-password" placeholder="至少 6 位" required /></label>
+            <label id="invite-row" class="hidden">邀请码<input id="invite-code" placeholder="管理员提供的邀请码（如已启用）" /></label>
+            <label id="remember-row" class="remember-row"><input type="checkbox" id="remember" /> 记住我（30 天免登录）</label>
+            <button type="submit" class="btn primary block" id="login-btn">登录</button>
+          </form>
+    </div>
+  </div>
+
+  <!-- App -->
+  <div id="app-view" class="app hidden">
+    <aside class="sidebar">
+      <div class="side-head">
+        <div class="brand">
+          <div class="logo-dot"><i class="ico" data-lucide="star" data-fb="★"></i></div>
+          <span>Star Math</span>
+        </div>
+        <button class="btn ghost icon" id="new-chat" title="新会话">＋</button>
+      </div>
+
+      <nav class="side-nav">
+        <button class="nav-item active" data-panel="chat">
+          <i class="ico" data-lucide="message-circle" data-fb="💬"></i> 智能问答
+        </button>
+        <button class="nav-item" data-panel="kb">
+          <i class="ico" data-lucide="library" data-fb="📚"></i> 知识库
+        </button>
+        <button class="nav-item" data-panel="eval">
+          <i class="ico" data-lucide="flask-conical" data-fb="🧪"></i> 测试评估
+        </button>
+        <button class="nav-item" data-panel="practice">
+          <i class="ico" data-lucide="pencil" data-fb="✏️"></i> 练习
+        </button>
+        <button class="nav-item" data-panel="learn">
+          <i class="ico" data-lucide="book-open" data-fb="📖"></i> 学习
+        </button>
+      </nav>
+
+      <div class="side-section">
+        <div class="side-label-row">
+          <div class="side-label">会话</div>
+          <button class="btn ghost tiny" id="conv-edit-toggle" type="button">管理</button>
+        </div>
+        <div id="conv-batch-bar" class="conv-batch-bar hidden">
+          <label class="batch-check"><input type="checkbox" id="conv-check-all" /> 全选</label>
+          <button class="btn danger tiny" id="conv-batch-del" type="button">删除所选</button>
+          <button class="btn ghost tiny" id="conv-edit-done" type="button">完成</button>
+        </div>
+        <div id="conv-list" class="conv-list"></div>
+      </div>
+
+      <div class="side-foot">
+        <div class="user-chip">
+          <div class="avatar" id="user-avatar">U</div>
+          <div class="user-meta">
+            <div id="user-name">用户</div>
+            <div class="muted" id="user-role">user</div>
+          </div>
+        </div>
+        <div class="side-foot-actions">
+          <button class="btn ghost icon" id="settings-btn" title="设置"><i class="ico" data-lucide="settings" data-fb="⚙"></i></button>
+          <button class="btn ghost block" id="logout">退出登录</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <!-- CHAT -->
+      <section id="panel-chat" class="panel active">
+        <header class="topbar">
+          <div>
+            <div class="top-title" id="chat-title">新会话</div>
+            <div class="muted small">基于 Star Math 数学知识库的检索增强问答</div>
+          </div>
+          <div class="top-actions">
+            <select id="mode-select" class="select">
+              <option value="rag">RAG 增强</option>
+              <option value="baseline">直接 LLM（基线）</option>
+            </select>
+            <select id="module-select" class="select" title="模块过滤">
+              <option value="">全库</option>
+              <option value="分析">分析</option>
+              <option value="线性代数">线性代数</option>
+              <option value="概率统计">概率统计</option>
+            </select>
+            <select id="topk-select" class="select">
+              <option value="3">Top-K 3</option>
+              <option value="5" selected>Top-K 5</option>
+              <option value="8">Top-K 8</option>
+              <option value="10">Top-K 10</option>
+            </select>
+          </div>
+        </header>
+
+        <div class="chat-workspace">
+          <div class="chat-main-col">
+            <div id="chat-scroll" class="chat-scroll">
+              <div id="messages" class="messages">
+                <div class="welcome" id="welcome">
+                  <div class="welcome-icon">✦</div>
+                  <h2>有什么可以帮你？</h2>
+                  <p>提问数学相关问题，系统会检索知识库并给出带来源的回答。</p>
+                  <div class="suggests">
+                    <button class="suggest">什么是数列极限？</button>
+                    <button class="suggest">简述收敛判别法的主要内容。</button>
+                    <button class="suggest">为什么说微积分基本定理很重要？</button>
+                    <button class="suggest">定积分与不定积分的关系是什么？</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <footer class="composer">
+              <div class="composer-box">
+                <div class="attach-chips" id="attach-chips"></div>
+                <div class="composer-row">
+                  <button type="button" class="attach-btn" id="attach-img-btn" title="上传图片，自动识别习题并解题"><i class="ico" data-lucide="image" data-fb="🖼"></i></button>
+                  <input type="file" id="attach-img-input" hidden accept=".png,.jpg,.jpeg,.webp,.bmp" />
+                  <button type="button" class="attach-btn" id="attach-file-btn" title="上传文档，自动识别习题并解题"><i class="ico" data-lucide="file-text" data-fb="📄"></i></button>
+                  <input type="file" id="attach-file-input" hidden accept=".md,.txt,.docx,.pdf" />
+                  <textarea id="question" rows="1" maxlength="2000" placeholder="输入数学问题，Enter 发送，Shift+Enter 换行"></textarea>
+                  <button class="btn primary" id="send-btn">发送</button>
+                </div>
+                <div class="composer-bar">
+                  <div class="muted small" id="stream-status">就绪</div>
+                  <span class="muted small" id="q-counter">0/2000</span>
+                </div>
+              </div>
+              <div class="composer-note">回答仅依据知识库资料生成，重要表述请对照教材原文。支持上传图片 / 文档，自动识别习题并解题。</div>
+            </footer>
+          </div>
+
+          <!-- 右侧来源预览（可拖拽调宽） -->
+          <aside id="preview-panel" class="preview-panel" hidden>
+            <div class="preview-resize" id="preview-resizer" title="拖动调整宽度"></div>
+            <div class="preview-header">
+              <div>
+                <div class="preview-title" id="preview-title">来源预览</div>
+                <div class="muted small" id="preview-sub">点击回答下方的来源卡片查看</div>
+              </div>
+              <button class="btn ghost icon" id="preview-close" title="关闭">✕</button>
+            </div>
+            <div class="preview-body" id="preview-body"></div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- KB -->
+      <section id="panel-kb" class="panel">
+        <header class="topbar">
+          <div>
+            <div class="top-title">知识库管理</div>
+            <div class="muted small">上传 / 解析 / 切分 / 向量化 / 删除</div>
+          </div>
+          <div class="top-actions">
+            <button class="btn ghost" id="ingest-btn">从默认目录导入</button>
+            <button class="btn primary" id="upload-btn">上传文档</button>
+            <input type="file" id="file-input" hidden accept=".md,.txt,.docx,.pdf" />
+          </div>
+        </header>
+        <div class="panel-body">
+          <div id="kb-role-bar" class="role-bar"></div>
+          <div class="stats-row" id="kb-stats"></div>
+
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>文档</th>
+                  <th id="th-course">模块</th>
+                  <th id="th-pages">页码</th>
+                  <th>切片</th>
+                  <th>格式</th>
+                  <th>更新时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="doc-table"></tbody>
+            </table>
+          </div>
+
+          <div class="search-debug card collapsible" id="debug-panel">
+            <button class="collapse-head" id="debug-toggle" type="button">
+              <span class="collapse-title">检索测试</span>
+              <span class="muted small">向量 / 关键词 / 混合（RRF 融合）策略对比</span>
+              <span class="chevron" id="debug-chevron">▾</span>
+            </button>
+            <div class="collapse-body" id="debug-body">
+              <div class="row">
+                <input id="debug-query" placeholder="输入查询，查看 Top-K 片段" />
+                <select id="debug-mode" class="select">
+                  <option value="hybrid" selected>混合检索（向量+BM25）</option>
+                  <option value="vector">纯向量检索</option>
+                  <option value="keyword">纯关键词（BM25）</option>
+                </select>
+                <select id="debug-part" class="select" title="模块过滤">
+                  <option value="">全库</option>
+                  <option value="分析">分析</option>
+                  <option value="线性代数">线性代数</option>
+                  <option value="概率统计">概率统计</option>
+                </select>
+                <select id="debug-topk" class="select">
+                  <option value="3">Top-K 3</option>
+                  <option value="5" selected>Top-K 5</option>
+                  <option value="10">Top-K 10</option>
+                </select>
+                <button class="btn primary" id="debug-btn">检索</button>
+              </div>
+              <div id="debug-results" class="debug-results"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- EVAL -->
+      <section id="panel-eval" class="panel">
+        <header class="topbar">
+          <div>
+            <div class="top-title">测试与评估</div>
+            <div class="muted small">单题对比 · 问题集 · 批量指标</div>
+          </div>
+        </header>
+        <div class="panel-body">
+          <div class="eval-tabs">
+            <button class="eval-tab active" data-eval-tab="compare">⚖️ 单题对比</button>
+            <button class="eval-tab" data-eval-tab="questions">📋 问题集</button>
+            <button class="eval-tab" data-eval-tab="metrics">📊 批量指标</button>
+          </div>
+
+          <div class="eval-tab-pane active" id="eval-pane-compare">
+            <div class="eval-grid">
+              <div class="card">
+                <h3>当前配置</h3>
+                <ul id="eval-config" class="kv"></ul>
+              </div>
+              <div class="card">
+                <h3>单题评测</h3>
+                <textarea id="eval-q" rows="3" placeholder="输入测试问题"></textarea>
+                <div class="row">
+                  <button class="btn primary" id="eval-compare">⚖️ 对比作答</button>
+                  <button class="btn ghost" id="eval-run">仅 RAG</button>
+                  <button class="btn ghost" id="eval-run-base">仅基线</button>
+                </div>
+                <div class="eval-compare">
+                  <div class="eval-col">
+                    <div class="eval-col-head"><span class="tag tag-rag">RAG · 带知识库</span><span class="muted small" id="eval-rag-latency"></span></div>
+                    <div id="eval-out-rag" class="eval-out">点「对比作答」后此处显示 RAG 答案</div>
+                  </div>
+                  <div class="eval-col">
+                    <div class="eval-col-head"><span class="tag tag-base">基线 · 纯 LLM</span><span class="muted small" id="eval-base-latency"></span></div>
+                    <div id="eval-out-base" class="eval-out">点「对比作答」后此处显示基线答案</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="eval-tab-pane" id="eval-pane-questions">
+            <div class="row" style="margin-bottom:10px">
+              <button class="btn primary" id="load-questions">加载问题集</button>
+              <button class="btn ghost" id="run-batch">批量评测前 10 题</button>
+            </div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>类型</th>
+                    <th>模块</th>
+                    <th>问题</th>
+                    <th>期望来源</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="q-table"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="eval-tab-pane" id="eval-pane-metrics">
+            <div class="card">
+              <h3>批量检索指标 <span class="muted small" id="metrics-meta"></span></h3>
+              <div id="metrics-body"><div class="muted small">加载中…</div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <!-- PRACTICE -->
+      <section id="panel-practice" class="panel">
+        <header class="topbar">
+          <div>
+            <div class="top-title">练习</div>
+            <div class="muted small">出题 / 判分 / 解析 / 错题本 / 掌握度</div>
+          </div>
+          <div class="top-actions">
+            <button class="btn primary" id="practice-start">开始做题</button>
+          </div>
+        </header>
+        <div class="panel-body">
+          <div class="card">
+            <h3>出题参数</h3>
+            <div class="row practice-params">
+              <label>模块
+                <select id="p-module" class="select">
+                  <option value="">全库</option>
+                  <option value="分析">分析</option>
+                  <option value="线性代数">线性代数</option>
+                  <option value="概率统计">概率统计</option>
+                </select>
+              </label>
+              <label>题型
+                <select id="p-qtype" class="select">
+                  <option value="">全部</option>
+                  <option value="真题">真题</option>
+                  <option value="概念">概念</option>
+                </select>
+              </label>
+              <label>知识点
+                <select id="p-knowledge" class="select">
+                  <option value="">全部</option>
+                  <option>极限与连续</option>
+                  <option>导数与微分</option>
+                  <option>一元积分</option>
+                  <option>多元微分</option>
+                  <option>级数</option>
+                  <option>微分方程</option>
+                  <option>线性代数</option>
+                  <option>概率统计</option>
+                </select>
+              </label>
+              <label>难度
+                <select id="p-difficulty" class="select">
+                  <option value="">不限</option>
+                  <option value="L1">L1 定义</option>
+                  <option value="L2">L2 性质</option>
+                  <option value="L3">L3 综合</option>
+                </select>
+              </label>
+              <label>题数
+                <select id="p-count" class="select">
+                  <option value="3">3</option>
+                  <option value="5" selected>5</option>
+                  <option value="10">10</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div class="card" id="practice-quiz-card">
+            <h3>答题卡</h3>
+            <div id="practice-quiz" class="practice-quiz muted">点击「开始做题」生成题目。</div>
+          </div>
+
+          <div class="card" id="practice-explain-card hidden">
+            <h3>解析</h3>
+            <div id="practice-explain" class="practice-explain"></div>
+          </div>
+
+          <div class="card">
+            <h3>错题本
+              <button class="btn ghost tiny" id="practice-export" type="button" style="float:right">导出今日练习 / 错题</button>
+            </h3>
+            <div class="row" style="margin:6px 0">
+              <label class="muted small">模块
+                <select id="pr-module" class="select">
+                  <option value="">全部</option>
+                  <option value="分析">分析</option>
+                  <option value="线性代数">线性代数</option>
+                  <option value="概率统计">概率统计</option>
+                </select>
+              </label>
+              <label class="muted small">只看错题 <input type="checkbox" id="pr-wrong" style="accent-color:var(--accent)" /></label>
+            </div>
+            <div id="practice-records" class="practice-records muted">暂无做题记录。</div>
+          </div>
+
+          <div class="card">
+            <h3>模块掌握度</h3>
+            <div id="practice-mastery" class="practice-mastery muted">暂无数据，做题后自动更新。</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- LEARN · 习题册 -->
+      <section id="panel-learn" class="panel">
+        <header class="topbar">
+          <div>
+            <div class="top-title">学习 · 习题册</div>
+            <div class="muted small">上传文档 / 图片 → 识别习题 → RAG 智能解题 → 存入习题册</div>
+          </div>
+          <div class="top-actions">
+            <button class="btn ghost" id="ex-export-btn">导出习题册</button>
+            <button class="btn primary" id="ex-upload-btn">上传习题</button>
+            <input type="file" id="ex-file-input" hidden accept=".md,.txt,.docx,.pdf,.png,.jpg,.jpeg,.webp,.bmp" />
+          </div>
+        </header>
+        <div class="panel-body">
+          <div class="stats-row" id="ex-stats"></div>
+
+          <div class="card hidden" id="ex-recog-card">
+            <h3>识别结果与解题</h3>
+            <div id="ex-questions" class="ex-questions muted small">识别中…</div>
+          </div>
+
+          <div class="card">
+            <h3>习题册
+              <span style="float:right" class="muted small">按来源分组 · 点击题目展开解答</span>
+            </h3>
+            <div class="row" style="margin:6px 0">
+              <label class="muted small">题型
+                <select id="ex-qtype" class="select">
+                  <option value="">全部</option>
+                  <option value="choice">选择</option>
+                  <option value="judge">判断</option>
+                  <option value="short">简答</option>
+                  <option value="calc">计算</option>
+                </select>
+              </label>
+              <span class="muted small" id="ex-book-hint">上传习题并解题后自动归档到习题册。</span>
+            </div>
+            <div id="ex-book" class="ex-book muted">暂无习题。</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- 设置弹窗：账号信息 + 用户与下载权限 -->
+    <div id="settings-modal" class="modal hidden">
+      <div class="modal-mask" data-close-modal="settings"></div>
+      <div class="modal-card">
+        <div class="modal-head">
+          <div>
+            <div class="preview-title">设置</div>
+            <div class="muted small">账号信息 · 用户与下载权限</div>
+          </div>
+          <button class="btn ghost icon" data-close-modal="settings" title="关闭">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="card" style="margin-bottom:12px">
+            <h3>当前账号</h3>
+            <div id="settings-account" class="kv"></div>
+          </div>
+          <div id="settings-users-card" class="card">
+            <h3>用户与下载权限</h3>
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>用户名</th>
+                    <th>角色</th>
+                    <th>下载权限</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="user-table"></tbody>
+              </table>
+            </div>
+            <div class="muted small" style="margin-top:8px">普通用户可浏览知识库；上传/删除/重建仅管理员；下载需授权。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 通用预览弹窗（知识库分块 / 检索结果原文） -->
+    <div id="kb-preview-modal" class="modal hidden">
+      <div class="modal-mask" data-close-modal="preview"></div>
+      <div class="modal-card modal-wide">
+        <div class="modal-head">
+          <div>
+            <div class="preview-title" id="kb-preview-title">来源预览</div>
+            <div class="muted small" id="kb-preview-sub"></div>
+          </div>
+          <button class="btn ghost icon" data-close-modal="preview" title="关闭">✕</button>
+        </div>
+        <div class="modal-body preview-body" id="kb-preview-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script>if (!window.lucide) document.write('<script src="vendor/lucide/lucide.min.js"><\/script>');</script>
+  <script>window.lucide && lucide.createIcons();</script>
+  <script src="app.js?v=20261028-tabs"></script>
+</body>
+</html>
