@@ -1,0 +1,2551 @@
+{
+ "name": "Star Math 测试问题集",
+ "version": "1.0",
+ "size": 100,
+ "domain": "数学（分析 + 线性代数 + 概率统计）",
+ "source_kb": "C:/word/知识库/知识库/数学_RAG",
+ "questions": [
+  {
+   "id": 1,
+   "type": "概念型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L1",
+   "mode": "short",
+   "question": "什么是对数函数？",
+   "answer_points": [
+    "$y=\\log_a x$（$a>0,\\ a\\neq 1,\\ x>0$），是 $y=a^x$ 的[[反函数]]：$a^{\\log_a x}=x$"
+   ],
+   "expected_source": {
+    "file": "10_概念·对数函数.md",
+    "title": "对数函数",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "对数函数"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 2,
+   "type": "概念型",
+   "course": "线性代数",
+   "module": "线性代数",
+   "difficulty": "L1",
+   "mode": "short",
+   "question": "什么是矩阵？",
+   "answer_points": [
+    "$m\\times n$ 个数排成的矩形数表 $A=(a_{ij})$；可视为线性变换 $x\\mapsto Ax$ 的表示"
+   ],
+   "expected_source": {
+    "file": "10_概念·矩阵.md",
+    "title": "矩阵",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "矩阵"
+   ],
+   "knowledge": "线性代数"
+  },
+  {
+   "id": 3,
+   "type": "概念型",
+   "course": "概率统计",
+   "module": "概率统计",
+   "difficulty": "L1",
+   "mode": "short",
+   "question": "什么是期望与方差？",
+   "answer_points": [
+    "期望 $E[X]=\\sum x\\,P(X=x)$ 或 $E[X]=\\int x\\,f(x)\\,dx$；方差 $\\mathrm{Var}(X)=E[(X-E[X])^2]$"
+   ],
+   "expected_source": {
+    "file": "10_概念·期望与方差.md",
+    "title": "期望与方差",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "期望与方差"
+   ],
+   "knowledge": "概率统计"
+  },
+  {
+   "id": 4,
+   "type": "概念型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L1",
+   "mode": "short",
+   "question": "什么是三角函数？",
+   "answer_points": [
+    "以单位圆上的角度为自变量：$\\sin\\theta,\\ \\cos\\theta,\\ \\tan\\theta=\\dfrac{\\sin\\theta}{\\cos\\theta}$（$\\theta$ 常取弧度）"
+   ],
+   "expected_source": {
+    "file": "10_概念·三角函数.md",
+    "title": "三角函数",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "三角函数"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 5,
+   "type": "概念型",
+   "course": "线性代数",
+   "module": "线性代数",
+   "difficulty": "L1",
+   "mode": "short",
+   "question": "什么是特征值？",
+   "answer_points": [
+    "对方阵 $A$，若 $Av=\\lambda v$（$v\\neq 0$），则 $\\lambda$ 为特征值，$v$ 为对应特征向量"
+   ],
+   "expected_source": {
+    "file": "10_概念·特征值.md",
+    "title": "特征值",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "特征值"
+   ],
+   "knowledge": "线性代数"
+  },
+  {
+   "id": 6,
+   "type": "概念型",
+   "course": "概率统计",
+   "module": "概率统计",
+   "difficulty": "L1",
+   "mode": "short",
+   "question": "什么是分布？",
+   "answer_points": [
+    "描述随机变量取值概率的完整规则：离散型用概率质量函数 $P(X=x)$，连续型用概率密度函数 $f(x)$，统一用分布函数 $F(x)=P(X\\le x)$"
+   ],
+   "expected_source": {
+    "file": "10_概念·分布.md",
+    "title": "分布",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "分布"
+   ],
+   "knowledge": "概率统计"
+  },
+  {
+   "id": 7,
+   "type": "概念型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L1",
+   "mode": "short",
+   "question": "什么是不定积分？",
+   "answer_points": [
+    "在区间 $I$ 上，若 $F'(x) = f(x)$，则称 $F$ 是 $f$ 的原函数",
+    "不定积分 $\\int f(x)\\,dx = F(x) + C$（全体原函数，$C$ 为任意常数）"
+   ],
+   "expected_source": {
+    "file": "10_概念·不定积分.md",
+    "title": "不定积分",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "不定积分"
+   ],
+   "knowledge": "一元积分"
+  },
+  {
+   "id": 8,
+   "type": "概念型",
+   "course": "线性代数",
+   "module": "线性代数",
+   "difficulty": "L1",
+   "mode": "short",
+   "question": "什么是线性方程组？",
+   "answer_points": [
+    "$Ax=b$，即若干线性方程的联立；解的情况由增广矩阵的秩决定"
+   ],
+   "expected_source": {
+    "file": "10_概念·线性方程组.md",
+    "title": "线性方程组",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "线性方程组"
+   ],
+   "knowledge": "线性代数"
+  },
+  {
+   "id": 9,
+   "type": "概念型",
+   "course": "概率统计",
+   "module": "概率统计",
+   "difficulty": "L1",
+   "mode": "choice",
+   "question": "关于「随机事件」，以下哪项描述最准确？",
+   "options": [
+    "$(f\\circ g)(x)=f(g(x))$：先把 $x$ 交给 $g$，再把 $g(x)$ 交给",
+    "对总体分布作假设（原假设 $H_0$ 与备择假设 $H_1$），用样本判断是否拒绝 $H_0$ 的统",
+    "$P(A|B)=\\dfrac{P(A\\cap B)}{P(B)}$（$P(B)>0$）：已知 $B$",
+    "随机试验所有可能结果的集合（样本空间 $\\Omega$）的子集；事件发生 ⟺ 试验结果落在该子集内"
+   ],
+   "answer_index": 3,
+   "answer_points": [
+    "随机试验所有可能结果的集合（样本空间 $\\Omega$）的子集；事件发生 ⟺ 试验结果落在该子集内"
+   ],
+   "expected_source": {
+    "file": "10_概念·随机事件.md",
+    "title": "随机事件",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "随机事件"
+   ],
+   "knowledge": "概率统计"
+  },
+  {
+   "id": 10,
+   "type": "概念型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L1",
+   "mode": "short",
+   "question": "什么是Taylor公式？",
+   "answer_points": [
+    "若 $f$ 在 $x_0$ 附近有直到 $n+1$ 阶导数，则",
+    "$$f(x)=\\sum_{k=0}^{n}\\frac{f^{(k)}(x_0)}{k!}(x-x_0)^k + R_n(x)$$",
+    "余项（Lagrange 型）：$R_n(x)=\\dfrac{f^{(n+1)}(\\xi)}{(n+1)!}(x-x_0)^{n+1}$，$\\xi$ 介于 $x$ 与 $x_0$ 之间"
+   ],
+   "expected_source": {
+    "file": "10_概念·Taylor公式.md",
+    "title": "Taylor公式",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "Taylor公式"
+   ],
+   "knowledge": "导数与微分"
+  },
+  {
+   "id": 11,
+   "type": "概念型",
+   "course": "线性代数",
+   "module": "线性代数",
+   "difficulty": "L1",
+   "mode": "short",
+   "question": "什么是向量？",
+   "answer_points": [
+    "既有大小又有方向的量，$n$ 维向量记作 $(x_1,\\dots,x_n)$（列向量/行向量）；$\\mathbb{R}^n$ 中全体 $n$ 维向量"
+   ],
+   "expected_source": {
+    "file": "10_概念·向量.md",
+    "title": "向量",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "向量"
+   ],
+   "knowledge": "线性代数"
+  },
+  {
+   "id": 12,
+   "type": "概念型",
+   "course": "概率统计",
+   "module": "概率统计",
+   "difficulty": "L1",
+   "mode": "choice",
+   "question": "关于「分布」，以下哪项描述最准确？",
+   "options": [
+    "对总体分布作假设（原假设 $H_0$ 与备择假设 $H_1$），用样本判断是否拒绝 $H_0$ 的统",
+    "描述随机变量取值概率的完整规则：离散型用概率质量函数 $P(X=x)$，连续型用概率密度函数 $f(x)$，统一用分布函数 $F(x)=P(X\\le x)$",
+    "$P(A|B)=\\dfrac{P(A\\cap B)}{P(B)}$（$P(B)>0$）：已知 $B$",
+    "$f$ 在区间 $I$ 上一致连续 ⟺ $\\forall\\varepsilon>0,\\ \\exist"
+   ],
+   "answer_index": 1,
+   "answer_points": [
+    "描述随机变量取值概率的完整规则：离散型用概率质量函数 $P(X=x)$，连续型用概率密度函数 $f(x)$，统一用分布函数 $F(x)=P(X\\le x)$"
+   ],
+   "expected_source": {
+    "file": "10_概念·分布.md",
+    "title": "分布",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "分布"
+   ],
+   "knowledge": "概率统计"
+  },
+  {
+   "id": 13,
+   "type": "概念型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L1",
+   "mode": "short",
+   "question": "什么是反常积分？",
+   "answer_points": [
+    "无穷区间：$\\int_a^\\infty f := \\lim_{R\\to\\infty}\\int_a^R f$（极限存在才收敛）",
+    "无界函数：$\\int_0^1 \\frac{dx}{x^q} := \\lim_{\\varepsilon\\to 0^+}\\int_\\varepsilon^1 \\frac{dx}{x^q}$"
+   ],
+   "expected_source": {
+    "file": "10_概念·反常积分.md",
+    "title": "反常积分",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "反常积分"
+   ],
+   "knowledge": "一元积分"
+  },
+  {
+   "id": 14,
+   "type": "概念型",
+   "course": "线性代数",
+   "module": "线性代数",
+   "difficulty": "L1",
+   "mode": "choice",
+   "question": "关于「矩阵」，以下哪项描述最准确？",
+   "options": [
+    "$n$ 阶方阵 $A$ 对应的标量 $\\det A$，按排列的逆序数（莱布尼茨公式）定义；几何上是线",
+    "集合 $V$ 配有加法与数乘两种运算，满足封闭性及结合、交换、分配、零元、负元等公理（如 $\\mat",
+    "用不等号（$>$、$<$、$\\ge$、$\\le$）连接两个式子的关系式；使不等式成立的未知数取值范围",
+    "$m\\times n$ 个数排成的矩形数表 $A=(a_{ij})$；可视为线性变换 $x\\mapsto Ax$ 的表示"
+   ],
+   "answer_index": 3,
+   "answer_points": [
+    "$m\\times n$ 个数排成的矩形数表 $A=(a_{ij})$；可视为线性变换 $x\\mapsto Ax$ 的表示"
+   ],
+   "expected_source": {
+    "file": "10_概念·矩阵.md",
+    "title": "矩阵",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "矩阵"
+   ],
+   "knowledge": "线性代数"
+  },
+  {
+   "id": 15,
+   "type": "简答型",
+   "course": "概率统计",
+   "module": "概率统计",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述假设检验的主要内容。",
+   "answer_points": [
+    "显著性水平 $\\alpha$：犯第一类错误（拒真）的概率上限，常用 $0.05$",
+    "$p$ 值 $\\le\\alpha$ ⇒ 拒绝 $H_0$；否则不拒绝（≠ 接受）",
+    "两类错误：第一类拒真（Type I）、第二类受伪（Type II，概率 $\\beta$）；功效 $=1-\\beta$"
+   ],
+   "expected_source": {
+    "file": "10_概念·假设检验.md",
+    "title": "假设检验",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "假设检验"
+   ],
+   "knowledge": "概率统计"
+  },
+  {
+   "id": 16,
+   "type": "概念型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L1",
+   "mode": "short",
+   "question": "什么是复合函数？",
+   "answer_points": [
+    "$(f\\circ g)(x)=f(g(x))$：先把 $x$ 交给 $g$，再把 $g(x)$ 交给 $f$；$g$ 叫内层函数，$f$ 叫外层函数"
+   ],
+   "expected_source": {
+    "file": "10_概念·复合函数.md",
+    "title": "复合函数",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "复合函数"
+   ],
+   "knowledge": "导数与微分"
+  },
+  {
+   "id": 17,
+   "type": "简答型",
+   "course": "线性代数",
+   "module": "线性代数",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述矩阵的主要内容。",
+   "answer_points": [
+    "乘法：$(AB)_{ij}=\\sum_k A_{ik}B_{kj}$，要求 $A$ 的列数 $=$ $B$ 的行数",
+    "方阵可逆 ⟺ 存在 $A^{-1}$ 使 $AA^{-1}=A^{-1}A=I$ ⟺ $\\det A\\neq 0$",
+    "转置、秩（列空间维数）"
+   ],
+   "expected_source": {
+    "file": "10_概念·矩阵.md",
+    "title": "矩阵",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "矩阵"
+   ],
+   "knowledge": "线性代数"
+  },
+  {
+   "id": 18,
+   "type": "简答型",
+   "course": "概率统计",
+   "module": "概率统计",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述条件概率的主要内容。",
+   "answer_points": [
+    "乘法公式：$P(A\\cap B)=P(A|B)\\,P(B)$",
+    "独立性：$P(A\\cap B)=P(A)P(B)$ ⟺ $P(A|B)=P(A)$",
+    "贝叶斯公式：$P(B_i|A)=\\dfrac{P(A|B_i)P(B_i)}{\\sum_j P(A|B_j)P(B_j)}$"
+   ],
+   "expected_source": {
+    "file": "10_概念·条件概率.md",
+    "title": "条件概率",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "条件概率"
+   ],
+   "knowledge": "概率统计"
+  },
+  {
+   "id": 19,
+   "type": "概念型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L1",
+   "mode": "short",
+   "question": "什么是连续性？",
+   "answer_points": [
+    "$f$ 在 $x_0$ 连续 ⟺ $\\forall \\varepsilon>0,\\exists\\delta>0:\\ |x-x_0|<\\delta \\Rightarrow |f(x)-f(x_0)|<\\varepsilon$，等价于 $\\li"
+   ],
+   "expected_source": {
+    "file": "10_概念·连续性.md",
+    "title": "连续性",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "连续性"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 20,
+   "type": "简答型",
+   "course": "线性代数",
+   "module": "线性代数",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述向量的主要内容。",
+   "answer_points": [
+    "加法平行四边形法则；数乘改变长度与方向（负数为反向）",
+    "点积 $u\\cdot v=\\sum u_i v_i$（内积），$\\|u\\|=\\sqrt{u\\cdot u}$；正交 ⟺ 点积为 $0$",
+    "线性相关/无关：能否由其他向量组合表示"
+   ],
+   "expected_source": {
+    "file": "10_概念·向量.md",
+    "title": "向量",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "向量"
+   ],
+   "knowledge": "线性代数"
+  },
+  {
+   "id": 21,
+   "type": "简答型",
+   "course": "概率统计",
+   "module": "概率统计",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述随机事件的主要内容。",
+   "answer_points": [
+    "事件运算：交（同时发生）、并（至少一个发生）、补（不发生）",
+    "互斥：$A\\cap B=\\emptyset$（不能同时发生）；对立：$B=A^c$（互补且互斥）",
+    "概率公理：$0\\le P(A)\\le 1$；$P(\\Omega)=1$；可列可加性"
+   ],
+   "expected_source": {
+    "file": "10_概念·随机事件.md",
+    "title": "随机事件",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "随机事件"
+   ],
+   "knowledge": "概率统计"
+  },
+  {
+   "id": 22,
+   "type": "概念型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L1",
+   "mode": "short",
+   "question": "什么是不等式？",
+   "answer_points": [
+    "用不等号（$>$、$<$、$\\ge$、$\\le$）连接两个式子的关系式；使不等式成立的未知数取值范围称为"
+   ],
+   "expected_source": {
+    "file": "10_概念·不等式.md",
+    "title": "不等式",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "不等式"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 23,
+   "type": "简答型",
+   "course": "线性代数",
+   "module": "线性代数",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述线性方程组的主要内容。",
+   "answer_points": [
+    "有解判定：$\\mathrm{rank}(A)=\\mathrm{rank}([A|b])$；唯一解还需 $\\mathrm{rank}(A)=n$（未知数个数）",
+    "解法：高斯消元（行化简）→ 回代；自由变量给出无穷多解的参数表示",
+    "齐次 $Ax=0$：必有零解；有非零解 ⟺ $\\det A=0$（方阵时）"
+   ],
+   "expected_source": {
+    "file": "10_概念·线性方程组.md",
+    "title": "线性方程组",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "线性方程组"
+   ],
+   "knowledge": "线性代数"
+  },
+  {
+   "id": 24,
+   "type": "简答型",
+   "course": "概率统计",
+   "module": "概率统计",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述分布的主要内容。",
+   "answer_points": [
+    "分布函数性质：单调不减、右连续、$F(-\\infty)=0,\\ F(+\\infty)=1$",
+    "常见离散分布：二项 $B(n,p)$、泊松 $\\mathrm{Pois}(\\lambda)$；常见连续分布：均匀、指数、正态 $N(\\mu,\\sigma^2)$",
+    "密度 $f\\ge 0$ 且 $\\int_{-\\infty}^{+\\infty} f(x)\\,dx=1$；$P(a<X\\le b)=F(b)-F(a)$"
+   ],
+   "expected_source": {
+    "file": "10_概念·分布.md",
+    "title": "分布",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "分布"
+   ],
+   "knowledge": "概率统计"
+  },
+  {
+   "id": 25,
+   "type": "概念型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L1",
+   "mode": "short",
+   "question": "什么是三角函数公式？",
+   "answer_points": [
+    "[[三角函数]] 的全部常用恒等式，按\"和差角 → 倍角半角 → 和差化积\"一层层推出来——"
+   ],
+   "expected_source": {
+    "file": "10_概念·三角函数公式.md",
+    "title": "三角函数公式",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "三角函数公式"
+   ],
+   "knowledge": "导数与微分"
+  },
+  {
+   "id": 26,
+   "type": "简答型",
+   "course": "线性代数",
+   "module": "线性代数",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述向量空间的主要内容。",
+   "answer_points": [
+    "子空间判定：含零向量，且对加法和数乘封闭",
+    "基 = 极大线性无关组；维数 = 基中向量个数",
+    "矩阵的四大基本子空间：列空间、零空间、行空间、左零空间"
+   ],
+   "expected_source": {
+    "file": "10_概念·向量空间.md",
+    "title": "向量空间",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "向量空间"
+   ],
+   "knowledge": "线性代数"
+  },
+  {
+   "id": 27,
+   "type": "综合型",
+   "course": "概率统计",
+   "module": "概率统计",
+   "difficulty": "L3",
+   "mode": "short",
+   "question": "请结合相关理论，说明假设检验的意义。",
+   "answer_points": [
+    "先假设 $H_0$ 成立，看数据有多\"离谱\"；离谱到几乎不可能，就拒绝"
+   ],
+   "expected_source": {
+    "file": "10_概念·假设检验.md",
+    "title": "假设检验",
+    "section": "直觉",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "假设检验"
+   ],
+   "knowledge": "概率统计"
+  },
+  {
+   "id": 28,
+   "type": "概念型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L1",
+   "mode": "short",
+   "question": "什么是幂函数？",
+   "answer_points": [
+    "$y=x^\\alpha$，其中 $\\alpha$ 为实常数（区别于指数函数：底是变量、指数是常数）"
+   ],
+   "expected_source": {
+    "file": "10_概念·幂函数.md",
+    "title": "幂函数",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "幂函数"
+   ],
+   "knowledge": "导数与微分"
+  },
+  {
+   "id": 29,
+   "type": "简答型",
+   "course": "线性代数",
+   "module": "线性代数",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述特征值的主要内容。",
+   "answer_points": [
+    "求法：解特征方程 $\\det(A-\\lambda I)=0$",
+    "迹 $\\mathrm{tr}(A)=$ 特征值之和；$\\det A=$ 特征值之积",
+    "可对角化 $A=PDP^{-1}$ ⟺ 有 $n$ 个线性无关特征向量"
+   ],
+   "expected_source": {
+    "file": "10_概念·特征值.md",
+    "title": "特征值",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "特征值"
+   ],
+   "knowledge": "线性代数"
+  },
+  {
+   "id": 30,
+   "type": "综合型",
+   "course": "概率统计",
+   "module": "概率统计",
+   "difficulty": "L3",
+   "mode": "short",
+   "question": "请结合相关理论，说明分布的意义。",
+   "answer_points": [
+    "分布是随机变量的\"说明书\"——每个取值或区间值有多大可能"
+   ],
+   "expected_source": {
+    "file": "10_概念·分布.md",
+    "title": "分布",
+    "section": "直觉",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "分布"
+   ],
+   "knowledge": "概率统计"
+  },
+  {
+   "id": 31,
+   "type": "概念型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L1",
+   "mode": "short",
+   "question": "什么是值域？",
+   "answer_points": [
+    "函数所有可能输出的集合 $\\{f(x):x\\in A\\}$；值域是"
+   ],
+   "expected_source": {
+    "file": "10_概念·值域.md",
+    "title": "值域",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "值域"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 32,
+   "type": "综合型",
+   "course": "线性代数",
+   "module": "线性代数",
+   "difficulty": "L3",
+   "mode": "short",
+   "question": "请结合相关理论，说明向量空间的意义。",
+   "answer_points": [
+    "向量空间是\"能自由做加法和数乘的平面/空间\"；子空间是其中对两种运算都封闭的子集"
+   ],
+   "expected_source": {
+    "file": "10_概念·向量空间.md",
+    "title": "向量空间",
+    "section": "直觉",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "向量空间"
+   ],
+   "knowledge": "线性代数"
+  },
+  {
+   "id": 33,
+   "type": "概念型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L1",
+   "mode": "short",
+   "question": "什么是实数完备性？",
+   "answer_points": [
+    "$\\mathbb{R}$ 中每个柯西列都收敛（$\\mathbb{Q}$ 不满足，这是实数与有理数的根本区别）"
+   ],
+   "expected_source": {
+    "file": "10_概念·实数完备性.md",
+    "title": "实数完备性",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "实数完备性"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 34,
+   "type": "综合型",
+   "course": "线性代数",
+   "module": "线性代数",
+   "difficulty": "L3",
+   "mode": "short",
+   "question": "请结合相关理论，说明行列式的意义。",
+   "answer_points": [
+    "行列式 = 变换\"放大/缩小/翻转\"了多少倍体积；$0$ 表示把空间压扁（降维）"
+   ],
+   "expected_source": {
+    "file": "10_概念·行列式.md",
+    "title": "行列式",
+    "section": "直觉",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "行列式"
+   ],
+   "knowledge": "线性代数"
+  },
+  {
+   "id": 35,
+   "type": "概念型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L1",
+   "mode": "short",
+   "question": "什么是多元积分？",
+   "answer_points": [
+    "把定积分思想推广到多维：二重积分 $\\iint_D f\\,dA$（体积）、三重积分、曲线积分（第一型标量/第二型有向）、曲面积分（第一型/第二型）"
+   ],
+   "expected_source": {
+    "file": "10_概念·多元积分.md",
+    "title": "多元积分",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "多元积分"
+   ],
+   "knowledge": "一元积分"
+  },
+  {
+   "id": 36,
+   "type": "综合型",
+   "course": "线性代数",
+   "module": "线性代数",
+   "difficulty": "L3",
+   "mode": "short",
+   "question": "请结合相关理论，说明特征值的意义。",
+   "answer_points": [
+    "特征向量是变换中\"只被拉伸不改变方向\"的方向；$\\lambda$ 是拉伸倍数"
+   ],
+   "expected_source": {
+    "file": "10_概念·特征值.md",
+    "title": "特征值",
+    "section": "直觉",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "特征值"
+   ],
+   "knowledge": "线性代数"
+  },
+  {
+   "id": 37,
+   "type": "概念型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L1",
+   "mode": "short",
+   "question": "什么是双曲函数？",
+   "answer_points": [
+    "（用 $e^x$ 定义，是[[指数函数]]的组合）：",
+    "$$\\sinh x=\\frac{e^x-e^{-x}}{2},\\quad \\cosh x=\\frac{e^x+e^{-x}}{2},\\quad \\tanh x=\\frac{\\sinh x}{\\cosh x}$$"
+   ],
+   "expected_source": {
+    "file": "10_概念·双曲函数.md",
+    "title": "双曲函数",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "双曲函数"
+   ],
+   "knowledge": "导数与微分"
+  },
+  {
+   "id": 38,
+   "type": "综合型",
+   "course": "线性代数",
+   "module": "线性代数",
+   "difficulty": "L3",
+   "mode": "short",
+   "question": "请结合相关理论，说明向量的意义。",
+   "answer_points": [
+    "向量是\"带箭头的线段\"，也可看作\"移动一步\"的指令；加法和数乘是两种基本操作"
+   ],
+   "expected_source": {
+    "file": "10_概念·向量.md",
+    "title": "向量",
+    "section": "直觉",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "向量"
+   ],
+   "knowledge": "线性代数"
+  },
+  {
+   "id": 39,
+   "type": "概念型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L1",
+   "mode": "choice",
+   "question": "关于「连续性」，以下哪项描述最准确？",
+   "options": [
+    "$Ax=b$，即若干线性方程的联立；解的情况由增广矩阵的秩决定",
+    "分割 $a=x_0<\\cdots<x_n=b$，任取 $\\xi_i\\in[x_{i-1},x_i]$",
+    "$f:A\\to B$ 是对 $A$ 中每个元素唯一指定 $B$ 中一个元素的对应规则；$A$ 为定义",
+    "$f$ 在 $x_0$ 连续 ⟺ $\\forall \\varepsilon>0,\\exists\\delta>0:\\ |x-x_0|<\\delta \\Rightarrow |f(x)-f(x_0)|<\\varepsilon$，等价于 $\\li"
+   ],
+   "answer_index": 3,
+   "answer_points": [
+    "$f$ 在 $x_0$ 连续 ⟺ $\\forall \\varepsilon>0,\\exists\\delta>0:\\ |x-x_0|<\\delta \\Rightarrow |f(x)-f(x_0)|<\\varepsilon$，等价于 $\\li"
+   ],
+   "expected_source": {
+    "file": "10_概念·连续性.md",
+    "title": "连续性",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "连续性"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 40,
+   "type": "综合型",
+   "course": "线性代数",
+   "module": "线性代数",
+   "difficulty": "L3",
+   "mode": "short",
+   "question": "请结合相关理论，说明矩阵的意义。",
+   "answer_points": [
+    "矩阵是\"加工厂\"：把输入向量线性地变成输出向量；行数 = 输出维数，列数 = 输入维数"
+   ],
+   "expected_source": {
+    "file": "10_概念·矩阵.md",
+    "title": "矩阵",
+    "section": "直觉",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "矩阵"
+   ],
+   "knowledge": "线性代数"
+  },
+  {
+   "id": 41,
+   "type": "概念型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L1",
+   "mode": "choice",
+   "question": "关于「定义域」，以下哪项描述最准确？",
+   "options": [
+    "$f'(x_0) = \\lim_{h\\to 0} \\dfrac{f(x_0+h)-f(x_0)}{h",
+    "$f$ 在区间 $I$ 上一致连续 ⟺ $\\forall\\varepsilon>0,\\ \\exist",
+    "使函数有意义（有确定输出）的自变量取值范围，即函数 $f:A\\to B$ 中的集合 $A$",
+    "$P(A|B)=\\dfrac{P(A\\cap B)}{P(B)}$（$P(B)>0$）：已知 $B$"
+   ],
+   "answer_index": 2,
+   "answer_points": [
+    "使函数有意义（有确定输出）的自变量取值范围，即函数 $f:A\\to B$ 中的集合 $A$"
+   ],
+   "expected_source": {
+    "file": "10_概念·定义域.md",
+    "title": "定义域",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "定义域"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 42,
+   "type": "概念型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L1",
+   "mode": "choice",
+   "question": "关于「反函数」，以下哪项描述最准确？",
+   "options": [
+    "若 $f:A\\to B$ 是",
+    "$f:A\\to B$ 是对 $A$ 中每个元素唯一指定 $B$ 中一个元素的对应规则；$A$ 为定义",
+    "期望 $E[X]=\\sum x\\,P(X=x)$ 或 $E[X]=\\int x\\,f(x)\\,dx$",
+    "函数所有可能输出的集合 $\\{f(x):x\\in A\\}$；值域是"
+   ],
+   "answer_index": 0,
+   "answer_points": [
+    "若 $f:A\\to B$ 是"
+   ],
+   "expected_source": {
+    "file": "10_概念·反函数.md",
+    "title": "反函数",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "反函数"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 43,
+   "type": "概念型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L1",
+   "mode": "choice",
+   "question": "关于「复合函数」，以下哪项描述最准确？",
+   "options": [
+    "对总体分布作假设（原假设 $H_0$ 与备择假设 $H_1$），用样本判断是否拒绝 $H_0$ 的统",
+    "$\\mathbb{R}$ 中每个柯西列都收敛（$\\mathbb{Q}$ 不满足，这是实数与有理数的根",
+    "$(f\\circ g)(x)=f(g(x))$：先把 $x$ 交给 $g$，再把 $g(x)$ 交给 $f$；$g$ 叫内层函数，$f$ 叫外层函数",
+    "研究数、式与方程的基础代数工具：一元/多元方程（含二次方程）、不等式、多项式运算（加减乘除、因式分解"
+   ],
+   "answer_index": 2,
+   "answer_points": [
+    "$(f\\circ g)(x)=f(g(x))$：先把 $x$ 交给 $g$，再把 $g(x)$ 交给 $f$；$g$ 叫内层函数，$f$ 叫外层函数"
+   ],
+   "expected_source": {
+    "file": "10_概念·复合函数.md",
+    "title": "复合函数",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "复合函数"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 44,
+   "type": "概念型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L1",
+   "mode": "choice",
+   "question": "关于「数项级数」，以下哪项描述最准确？",
+   "options": [
+    "函数所有可能输出的集合 $\\{f(x):x\\in A\\}$；值域是",
+    "$\\sum_{n=1}^{\\infty} a_n$ 收敛 ⟺ 部分和数列 $s_n = a_1+\\cdots+a_n$ 收敛（即 [[数列极限]] 存在）",
+    "$f:A\\to B$ 是对 $A$ 中每个元素唯一指定 $B$ 中一个元素的对应规则；$A$ 为定义",
+    "集合 $V$ 配有加法与数乘两种运算，满足封闭性及结合、交换、分配、零元、负元等公理（如 $\\mat"
+   ],
+   "answer_index": 1,
+   "answer_points": [
+    "$\\sum_{n=1}^{\\infty} a_n$ 收敛 ⟺ 部分和数列 $s_n = a_1+\\cdots+a_n$ 收敛（即 [[数列极限]] 存在）"
+   ],
+   "expected_source": {
+    "file": "10_概念·数项级数.md",
+    "title": "数项级数",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "数项级数"
+   ],
+   "knowledge": "级数"
+  },
+  {
+   "id": 45,
+   "type": "概念型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L1",
+   "mode": "choice",
+   "question": "关于「方程」，以下哪项描述最准确？",
+   "options": [
+    "$\\lim_{n\\to\\infty} a_n = L$ ⟺ $\\forall \\varepsilon",
+    "含有未知数的等式；使等式成立的未知数的值称为方程的",
+    "$f:A\\to B$ 是对 $A$ 中每个元素唯一指定 $B$ 中一个元素的对应规则；$A$ 为定义",
+    "对方阵 $A$，若 $Av=\\lambda v$（$v\\neq 0$），则 $\\lambda$ 为特"
+   ],
+   "answer_index": 1,
+   "answer_points": [
+    "含有未知数的等式；使等式成立的未知数的值称为方程的"
+   ],
+   "expected_source": {
+    "file": "10_概念·方程.md",
+    "title": "方程",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "方程"
+   ],
+   "knowledge": "微分方程"
+  },
+  {
+   "id": 46,
+   "type": "概念型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L1",
+   "mode": "choice",
+   "question": "关于「反三角函数」，以下哪项描述最准确？",
+   "options": [
+    "$n$ 阶方阵 $A$ 对应的标量 $\\det A$，按排列的逆序数（莱布尼茨公式）定义；几何上是线",
+    "$\\mathbb{R}$ 中每个柯西列都收敛（$\\mathbb{Q}$ 不满足，这是实数与有理数的根",
+    "三角函数的[[反函数]]。三角函数非单射，须先限制到主值区间再取反：",
+    "$y=x^\\alpha$，其中 $\\alpha$ 为实常数（区别于指数函数：底是变量、指数是常数）"
+   ],
+   "answer_index": 2,
+   "answer_points": [
+    "三角函数的[[反函数]]。三角函数非单射，须先限制到主值区间再取反："
+   ],
+   "expected_source": {
+    "file": "10_概念·反三角函数.md",
+    "title": "反三角函数",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "反三角函数"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 47,
+   "type": "概念型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L1",
+   "mode": "choice",
+   "question": "关于「指数函数」，以下哪项描述最准确？",
+   "options": [
+    "若 $f:A\\to B$ 是",
+    "$y=a^x$（$a>0,\\ a\\neq 1$），以常数为底、自变量在指数上",
+    "在欧氏平面上研究点、线、角、三角形、圆等图形性质与度量关系的公理体系（以平行公设为核心假设之一）",
+    "$Ax=b$，即若干线性方程的联立；解的情况由增广矩阵的秩决定"
+   ],
+   "answer_index": 1,
+   "answer_points": [
+    "$y=a^x$（$a>0,\\ a\\neq 1$），以常数为底、自变量在指数上"
+   ],
+   "expected_source": {
+    "file": "10_概念·指数函数.md",
+    "title": "指数函数",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "指数函数"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 48,
+   "type": "概念型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L1",
+   "mode": "choice",
+   "question": "关于「多元积分」，以下哪项描述最准确？",
+   "options": [
+    "把定积分思想推广到多维：二重积分 $\\iint_D f\\,dA$（体积）、三重积分、曲线积分（第一型标量/第二型有向）、曲面积分（第一型/第二型）",
+    "对方阵 $A$，若 $Av=\\lambda v$（$v\\neq 0$），则 $\\lambda$ 为特",
+    "$f$ 在 $x_0$ 连续 ⟺ $\\forall \\varepsilon>0,\\exists\\de",
+    "若 $f$ 在 $x_0$ 附近有直到 $n+1$ 阶导数，则"
+   ],
+   "answer_index": 0,
+   "answer_points": [
+    "把定积分思想推广到多维：二重积分 $\\iint_D f\\,dA$（体积）、三重积分、曲线积分（第一型标量/第二型有向）、曲面积分（第一型/第二型）"
+   ],
+   "expected_source": {
+    "file": "10_概念·多元积分.md",
+    "title": "多元积分",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "多元积分"
+   ],
+   "knowledge": "一元积分"
+  },
+  {
+   "id": 49,
+   "type": "概念型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L1",
+   "mode": "choice",
+   "question": "关于「双曲函数」，以下哪项描述最准确？",
+   "options": [
+    "含有未知数的等式；使等式成立的未知数的值称为方程的",
+    "使函数有意义（有确定输出）的自变量取值范围，即函数 $f:A\\to B$ 中的集合 $A$",
+    "（用 $e^x$ 定义，是[[指数函数]]的组合）：",
+    "既有大小又有方向的量，$n$ 维向量记作 $(x_1,\\dots,x_n)$（列向量/行向量）；$\\"
+   ],
+   "answer_index": 2,
+   "answer_points": [
+    "（用 $e^x$ 定义，是[[指数函数]]的组合）："
+   ],
+   "expected_source": {
+    "file": "10_概念·双曲函数.md",
+    "title": "双曲函数",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "双曲函数"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 50,
+   "type": "概念型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L1",
+   "mode": "choice",
+   "question": "关于「幂函数」，以下哪项描述最准确？",
+   "options": [
+    "以单位圆上的角度为自变量：$\\sin\\theta,\\ \\cos\\theta,\\ \\tan\\theta",
+    "用不等号（$>$、$<$、$\\ge$、$\\le$）连接两个式子的关系式；使不等式成立的未知数取值范围",
+    "$m\\times n$ 个数排成的矩形数表 $A=(a_{ij})$；可视为线性变换 $x\\maps",
+    "$y=x^\\alpha$，其中 $\\alpha$ 为实常数（区别于指数函数：底是变量、指数是常数）"
+   ],
+   "answer_index": 3,
+   "answer_points": [
+    "$y=x^\\alpha$，其中 $\\alpha$ 为实常数（区别于指数函数：底是变量、指数是常数）"
+   ],
+   "expected_source": {
+    "file": "10_概念·幂函数.md",
+    "title": "幂函数",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "幂函数"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 51,
+   "type": "简答型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述三角函数的主要内容。",
+   "answer_points": [
+    "基本恒等式 $\\sin^2\\theta+\\cos^2\\theta=1$",
+    "周期性：$\\sin,\\cos$ 周期 $2\\pi$；$\\tan$ 周期 $\\pi$",
+    "和角公式、倍角公式、诱导公式；弧度制下 $\\lim_{x\\to 0}\\frac{\\sin x}{x}=1$"
+   ],
+   "expected_source": {
+    "file": "10_概念·三角函数.md",
+    "title": "三角函数",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "三角函数"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 52,
+   "type": "简答型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述多元积分的主要内容。",
+   "answer_points": [
+    "重积分化累次积分（Fubini）；换元乘 Jacobian：$\\iint f\\,dxdy=\\iint f\\,|J|\\,dudv$（极坐标 $|J|=r$）",
+    "第二型积分与定向有关，符号随方向/法向翻转",
+    "三大积分公式：Green（平面）、Gauss（散度）、Stokes（旋度）——\"局部变化量积分 = 边界总量\""
+   ],
+   "expected_source": {
+    "file": "10_概念·多元积分.md",
+    "title": "多元积分",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "多元积分"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 53,
+   "type": "简答型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述定积分的主要内容。",
+   "answer_points": [
+    "-"
+   ],
+   "expected_source": {
+    "file": "10_概念·定积分.md",
+    "title": "定积分",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "定积分"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 54,
+   "type": "简答型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述方程的主要内容。",
+   "answer_points": [
+    "- 解方程是"
+   ],
+   "expected_source": {
+    "file": "10_概念·方程.md",
+    "title": "方程",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "方程"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 55,
+   "type": "简答型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述初等代数的主要内容。",
+   "answer_points": [
+    "二次方程 $ax^2+bx+c=0$：判别式 $\\Delta=b^2-4ac$ 决定实根个数；求根公式 $x=\\dfrac{-b\\pm\\sqrt{\\Delta}}{2a}$",
+    "不等式乘（除）负数必须变号",
+    "多项式恒等：两多项式恒等 ⟺ 对应系数相等"
+   ],
+   "expected_source": {
+    "file": "10_概念·初等代数.md",
+    "title": "初等代数",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "初等代数"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 56,
+   "type": "简答型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述对数函数的主要内容。",
+   "answer_points": [
+    "定义域 $(0,+\\infty)$，值域 $\\mathbb{R}$，恒过 $(1,0)$，$y$ 轴为渐近线；$a>1$ 递增，$0<a<1$ 递减",
+    "运算律：$\\log_a(xy)=\\log_a x+\\log_a y$，$\\log_a\\dfrac{x}{y}=\\log_a x-\\log_a y$，$\\log_a x^p=p\\log_a x$",
+    "换底公式：$\\log_a b=\\dfrac{\\ln b}{\\ln a}$；特别地 $\\log_a b=\\dfrac{1}{\\log_b a}$"
+   ],
+   "expected_source": {
+    "file": "10_概念·对数函数.md",
+    "title": "对数函数",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "对数函数"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 57,
+   "type": "简答型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述指数函数的主要内容。",
+   "answer_points": [
+    "定义域 $\\mathbb{R}$，值域 $(0,+\\infty)$，恒过 $(0,1)$，$x$ 轴为渐近线",
+    "单调性：$a>1$ 递增；$0<a<1$ 递减",
+    "运算律：$a^{x+y}=a^x a^y$，$a^{x-y}=\\dfrac{a^x}{a^y}$，$(a^x)^y=a^{xy}$，$(ab)^x=a^x b^x$"
+   ],
+   "expected_source": {
+    "file": "10_概念·指数函数.md",
+    "title": "指数函数",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "指数函数"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 58,
+   "type": "简答型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述不定积分的主要内容。",
+   "answer_points": [
+    "原函数必连续（可导 ⇒ 连续）；任意两个原函数相差一个常数",
+    "$\\int \\frac{1}{x}dx = \\ln|x| + C$，且要"
+   ],
+   "expected_source": {
+    "file": "10_概念·不定积分.md",
+    "title": "不定积分",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "不定积分"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 59,
+   "type": "简答型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述函数极限的主要内容。",
+   "answer_points": [
+    "注意 $0<|x-a|$：极限"
+   ],
+   "expected_source": {
+    "file": "10_概念·函数极限.md",
+    "title": "函数极限",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "函数极限"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 60,
+   "type": "简答型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述反三角函数的主要内容。",
+   "answer_points": [
+    "主值区间是灵魂：$\\arcsin$ 取 $[-\\frac{\\pi}{2},\\frac{\\pi}{2}]$，$\\arctan$ 取 $(-\\frac{\\pi}{2},\\frac{\\pi}{2})$，$\\arccos$ 取 $[0,\\pi]$",
+    "复合关系：$\\sin(\\arcsin x)=x$ 恒成立；但 $\\arcsin(\\sin x)=x$ 仅当 $x$ 在主值区间内",
+    "导数（重要）：$(\\arcsin x)'=\\dfrac{1}{\\sqrt{1-x^2}}$，$(\\arccos x)'=-\\dfrac{1}{\\sqrt{1-x^2}}$，$(\\arctan x)'=\\dfrac{1}{1+x^2}$"
+   ],
+   "expected_source": {
+    "file": "10_概念·反三角函数.md",
+    "title": "反三角函数",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "反三角函数"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 61,
+   "type": "简答型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述连续性的主要内容。",
+   "answer_points": [
+    "$f$ 在 $x_0$ 连续 ⟺ $\\forall \\varepsilon>0,\\exists\\delta>0:\\ |x-x_0|<\\delta \\Rightarrow |f(x)-f(x_0)|<\\varepsilon$，等价于 $\\li"
+   ],
+   "expected_source": {
+    "file": "10_概念·连续性.md",
+    "title": "连续性",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "连续性"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 62,
+   "type": "简答型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述多项式的主要内容。",
+   "answer_points": [
+    "- 运算：加减"
+   ],
+   "expected_source": {
+    "file": "10_概念·多项式.md",
+    "title": "多项式",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "多项式"
+   ],
+   "knowledge": "线性代数"
+  },
+  {
+   "id": 63,
+   "type": "简答型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述导数的主要内容。",
+   "answer_points": [
+    "-"
+   ],
+   "expected_source": {
+    "file": "10_概念·导数.md",
+    "title": "导数",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "导数"
+   ],
+   "knowledge": "导数与微分"
+  },
+  {
+   "id": 64,
+   "type": "简答型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述一致连续的主要内容。",
+   "answer_points": [
+    "-"
+   ],
+   "expected_source": {
+    "file": "10_概念·一致连续.md",
+    "title": "一致连续",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "一致连续"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 65,
+   "type": "简答型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述数项级数的主要内容。",
+   "answer_points": [
+    "-"
+   ],
+   "expected_source": {
+    "file": "10_概念·数项级数.md",
+    "title": "数项级数",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "数项级数"
+   ],
+   "knowledge": "级数"
+  },
+  {
+   "id": 66,
+   "type": "简答型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述幂函数的主要内容。",
+   "answer_points": [
+    "定义域随 $\\alpha$ 变化：$\\alpha$ 为正整数 → $\\mathbb{R}$；$\\alpha$ 为负整数或 $0$ → $x\\neq 0$；$\\alpha=1/n$（$n$ 偶）→ $[0,\\infty)$",
+    "图像都过 $(1,1)$；$\\alpha>0$ 时在 $(0,\\infty)$ 上递增，$\\alpha<0$ 时递减、两坐标轴为渐近线",
+    "求导公式（微积分基础）：$(x^\\alpha)'=\\alpha x^{\\alpha-1}$；$\\int x^\\alpha dx=\\dfrac{x^{\\alpha+1}}{\\alpha+1}+C\\ (\\alpha\\neq -1)$"
+   ],
+   "expected_source": {
+    "file": "10_概念·幂函数.md",
+    "title": "幂函数",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "幂函数"
+   ],
+   "knowledge": "导数与微分"
+  },
+  {
+   "id": 67,
+   "type": "简答型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述值域的主要内容。",
+   "answer_points": [
+    "常用求法：图像法、单调性分析、配方（二次函数顶点）、基本不等式、反函数法（原函数值域 = 反函数定义域）",
+    "连续函数在闭区间上必有最大/最小值（最值存在性，见[[介值定理]]关联的最值推论）",
+    "非单调函数的最值可能在区间内部取得，不只在端点"
+   ],
+   "expected_source": {
+    "file": "10_概念·值域.md",
+    "title": "值域",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "值域"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 68,
+   "type": "简答型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述数列极限的主要内容。",
+   "answer_points": [
+    "顺序是\"先给 $\\varepsilon$，再找 $N$\"——$N$ 依赖 $\\varepsilon$，不能反",
+    "极限若存在，必唯一"
+   ],
+   "expected_source": {
+    "file": "10_概念·数列极限.md",
+    "title": "数列极限",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "数列极限"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 69,
+   "type": "简答型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述三角函数公式的主要内容。",
+   "answer_points": [
+    "[[三角函数]] 的全部常用恒等式，按\"和差角 → 倍角半角 → 和差化积\"一层层推出来——"
+   ],
+   "expected_source": {
+    "file": "10_概念·三角函数公式.md",
+    "title": "三角函数公式",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "三角函数公式"
+   ],
+   "knowledge": "导数与微分"
+  },
+  {
+   "id": 70,
+   "type": "简答型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述反函数的主要内容。",
+   "answer_points": [
+    "存在条件：$f$ 是单射；严格单调函数必是单射，故必有反函数",
+    "求法：由 $y=f(x)$ 解出 $x=\\varphi(y)$，再交换 $x,y$ 写成 $y=f^{-1}(x)$"
+   ],
+   "expected_source": {
+    "file": "10_概念·反函数.md",
+    "title": "反函数",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "反函数"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 71,
+   "type": "简答型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述反常积分的主要内容。",
+   "answer_points": [
+    "两大标杆：$\\int_1^\\infty \\frac{dx}{x^p}$ 当 $p>1$ 收敛；$\\int_0^1 \\frac{dx}{x^q}$ 当 $q<1$ 收敛",
+    "（与 [[收敛判别法]] 中的 $p$-级数完全对应，记忆时对照着记）"
+   ],
+   "expected_source": {
+    "file": "10_概念·反常积分.md",
+    "title": "反常积分",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "反常积分"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 72,
+   "type": "简答型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述不等式的主要内容。",
+   "answer_points": [
+    "-"
+   ],
+   "expected_source": {
+    "file": "10_概念·不等式.md",
+    "title": "不等式",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "不等式"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 73,
+   "type": "简答型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述实数完备性的主要内容。",
+   "answer_points": [
+    "$\\mathbb{R}$ 中每个柯西列都收敛（$\\mathbb{Q}$ 不满足，这是实数与有理数的根本区别）"
+   ],
+   "expected_source": {
+    "file": "10_概念·实数完备性.md",
+    "title": "实数完备性",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "实数完备性"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 74,
+   "type": "简答型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L2",
+   "mode": "short",
+   "question": "简述平面几何的主要内容。",
+   "answer_points": [
+    "三角形内角和 $=180^\\circ$；外角等于不相邻两内角之和",
+    "全等（SSS/SAS/ASA/AAS）与相似（AA）判定",
+    "圆：圆心角、圆周角、切线性质、圆幂定理"
+   ],
+   "expected_source": {
+    "file": "10_概念·平面几何.md",
+    "title": "平面几何",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "平面几何"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 75,
+   "type": "综合型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L3",
+   "mode": "short",
+   "question": "请结合相关理论，说明一致连续的意义。",
+   "answer_points": [
+    "整条区间\"同步\"地连续——一把 $\\delta$ 尺子量遍所有点；图像上不允许出现\"越走越陡到失控\"的地方"
+   ],
+   "expected_source": {
+    "file": "10_概念·一致连续.md",
+    "title": "一致连续",
+    "section": "直觉",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "一致连续"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 76,
+   "type": "综合型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L3",
+   "mode": "short",
+   "question": "请结合相关理论，说明数列极限的意义。",
+   "answer_points": [
+    "数列\"尾巴\"上的所有项，都挤进以 $L$ 为中心的任意小窗口"
+   ],
+   "expected_source": {
+    "file": "10_概念·数列极限.md",
+    "title": "数列极限",
+    "section": "直觉",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "数列极限"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 77,
+   "type": "综合型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L3",
+   "mode": "short",
+   "question": "请结合相关理论，说明复合函数的意义。",
+   "answer_points": [
+    "流水线——输入先过第一台机器 $g$，出来的半成品再过第二台机器 $f$，顺序不能换"
+   ],
+   "expected_source": {
+    "file": "10_概念·复合函数.md",
+    "title": "复合函数",
+    "section": "直觉",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "复合函数"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 78,
+   "type": "综合型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L3",
+   "mode": "short",
+   "question": "请结合相关理论，说明反常积分的意义。",
+   "answer_points": [
+    "把\"无穷\"变成\"极限过程\"——先在有限区间算定积分，再让区间跑到无穷"
+   ],
+   "expected_source": {
+    "file": "10_概念·反常积分.md",
+    "title": "反常积分",
+    "section": "直觉",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "反常积分"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 79,
+   "type": "综合型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L3",
+   "mode": "short",
+   "question": "请结合相关理论，说明反函数的意义。",
+   "answer_points": [
+    "把机器倒过来开——知道输出，反推输入；倒车能成功的前提是\"一个输出只对应一个输入\"（单射）"
+   ],
+   "expected_source": {
+    "file": "10_概念·反函数.md",
+    "title": "反函数",
+    "section": "直觉",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "反函数"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 80,
+   "type": "综合型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L3",
+   "mode": "short",
+   "question": "请结合相关理论，说明对数函数的意义。",
+   "answer_points": [
+    "问\"要乘几次 $a$ 才能到 $x$\"——把巨大的乘法变成加法，压缩量级；地震震级、声音分贝、pH 值都用它"
+   ],
+   "expected_source": {
+    "file": "10_概念·对数函数.md",
+    "title": "对数函数",
+    "section": "直觉",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "对数函数"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 81,
+   "type": "综合型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L3",
+   "mode": "short",
+   "question": "请结合相关理论，说明多项式的意义。",
+   "answer_points": [
+    "把\"数\"升级成\"字母的线性组合\"——多项式对加法、乘法封闭，是代数中最\"听话\"的一类对象"
+   ],
+   "expected_source": {
+    "file": "10_概念·多项式.md",
+    "title": "多项式",
+    "section": "直觉",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "多项式"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 82,
+   "type": "综合型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L3",
+   "mode": "short",
+   "question": "请结合相关理论，说明三角函数的意义。",
+   "answer_points": [
+    "描述圆周运动在坐标轴上的投影；\"旋转了几圈\"用周期体现"
+   ],
+   "expected_source": {
+    "file": "10_概念·三角函数.md",
+    "title": "三角函数",
+    "section": "直觉",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "三角函数"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 83,
+   "type": "综合型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L3",
+   "mode": "short",
+   "question": "请结合相关理论，说明连续性的意义。",
+   "answer_points": [
+    "笔不离纸；输入的小变化只引起输出的小变化"
+   ],
+   "expected_source": {
+    "file": "10_概念·连续性.md",
+    "title": "连续性",
+    "section": "直觉",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "连续性"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 84,
+   "type": "综合型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L3",
+   "mode": "short",
+   "question": "请结合相关理论，说明不等式的意义。",
+   "answer_points": [
+    "数轴上的区间——解集是数轴上的一段（或几段）区域，端点开闭决定含不含边界"
+   ],
+   "expected_source": {
+    "file": "10_概念·不等式.md",
+    "title": "不等式",
+    "section": "直觉",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "不等式"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 85,
+   "type": "综合型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L3",
+   "mode": "short",
+   "question": "请结合相关理论，说明实数完备性的意义。",
+   "answer_points": [
+    "实数轴上\"没有洞\""
+   ],
+   "expected_source": {
+    "file": "10_概念·实数完备性.md",
+    "title": "实数完备性",
+    "section": "直觉",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "实数完备性"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 86,
+   "type": "综合型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L3",
+   "mode": "short",
+   "question": "请结合相关理论，说明导数的意义。",
+   "answer_points": [
+    "三个等价的画面——瞬时变化率 / 切线斜率 / 最佳线性逼近",
+    "（$f(x_0+h) \\approx f(x_0) + f'(x_0)h$）"
+   ],
+   "expected_source": {
+    "file": "10_概念·导数.md",
+    "title": "导数",
+    "section": "直觉",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "导数"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "id": 87,
+   "type": "综合型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L3",
+   "mode": "short",
+   "question": "请结合相关理论，说明指数与对数的意义。",
+   "answer_points": [
+    "指数是\"重复乘\"，对数是\"问：要乘几次才到 $x$\"；两者互相拆解"
+   ],
+   "expected_source": {
+    "file": "10_概念·指数与对数.md",
+    "title": "指数与对数",
+    "section": "直觉",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "指数与对数"
+   ],
+   "knowledge": "极限与连续"
+  },
+  {
+   "type": "对比型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L3",
+   "mode": "short",
+   "question": "定积分与不定积分的关系是什么？",
+   "answer_points": [
+    "不定积分是求导的逆运算（全体原函数）",
+    "定积分是 Riemann 和的极限（有向面积）",
+    "微积分基本定理把两者焊成互逆，但二者并不等价（可积 ≠ 有原函数）"
+   ],
+   "expected_source": {
+    "file": "10_概念·定积分.md",
+    "title": "定积分",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "定积分",
+    "不定积分",
+    "FTC"
+   ],
+   "id": 88,
+   "knowledge": "极限与连续"
+  },
+  {
+   "type": "对比型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L3",
+   "mode": "short",
+   "question": "数列极限与函数极限的关系是什么？",
+   "answer_points": [
+    "数列极限是下标趋于无穷时项的逼近行为",
+    "函数极限是自变量趋于某点/无穷时函数值的逼近行为",
+    "Heine 定理把函数极限归结为数列极限（归结原则）"
+   ],
+   "expected_source": {
+    "file": "10_概念·函数极限.md",
+    "title": "函数极限",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "数列极限",
+    "函数极限",
+    "Heine 定理"
+   ],
+   "id": 89,
+   "knowledge": "极限与连续"
+  },
+  {
+   "type": "对比型",
+   "course": "概率统计",
+   "module": "概率统计",
+   "difficulty": "L3",
+   "mode": "short",
+   "question": "大数定律与中心极限定理的关系是什么？",
+   "answer_points": [
+    "大数定律描述样本均值依概率收敛到期望（趋于确定值）",
+    "中心极限定理刻画均值波动的分布形状（趋于正态）",
+    "二者互为表里：一个讲收敛目标，一个讲收敛的分布形态"
+   ],
+   "expected_source": {
+    "file": "20_定理·中心极限定理.md",
+    "title": "中心极限定理",
+    "section": "为什么重要",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "大数定律",
+    "中心极限定理",
+    "正态"
+   ],
+   "id": 90,
+   "knowledge": "极限与连续"
+  },
+  {
+   "type": "综合型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L3",
+   "mode": "calc",
+   "question": "用数列极限的 ε-N 语言证明：lim_{n→∞} 1/n = 0。",
+   "calc_steps": [
+    "任取 ε>0，要找 N 使 n>N 时 |1/n-0|<ε",
+    "即 1/n < ε，等价于 n > 1/ε",
+    "取 N = ⌈1/ε⌉（或任意大于 1/ε 的整数），当 n>N 时 |1/n|<ε",
+    "由 ε 的任意性，lim 1/n = 0 得证"
+   ],
+   "answer_points": [
+    "任取 ε>0",
+    "取 N=⌈1/ε⌉",
+    "n>N 时 |1/n-0|<ε",
+    "极限为 0"
+   ],
+   "expected_source": {
+    "file": "10_概念·数列极限.md",
+    "title": "数列极限",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "数列极限",
+    "ε-N 语言"
+   ],
+   "id": 91,
+   "knowledge": "极限与连续"
+  },
+  {
+   "type": "综合型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L3",
+   "mode": "calc",
+   "question": "求函数 f(x)=x² 在 x=2 处的导数。",
+   "calc_steps": [
+    "导数定义：f'(x₀)=lim_{h→0} (f(x₀+h)-f(x₀))/h",
+    "代入：((2+h)²-4)/h = (4+4h+h²-4)/h = 4+h",
+    "取极限 lim_{h→0}(4+h)=4",
+    "f'(2)=4"
+   ],
+   "answer_points": [
+    "代入导数定义",
+    "差商化简为 4+h",
+    "取极限得 4"
+   ],
+   "expected_source": {
+    "file": "10_概念·导数.md",
+    "title": "导数",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "导数",
+    "切线"
+   ],
+   "id": 92,
+   "knowledge": "导数与微分"
+  },
+  {
+   "type": "综合型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L3",
+   "mode": "calc",
+   "question": "计算定积分 ∫₀¹ x dx。",
+   "calc_steps": [
+    "x 的一个原函数是 x²/2（牛顿-莱布尼茨公式）",
+    "代入上下限：x²/2 |₀¹ = 1/2 - 0 = 1/2",
+    "∫₀¹ x dx = 1/2"
+   ],
+   "answer_points": [
+    "原函数 x²/2",
+    "代入上下限",
+    "结果为 1/2"
+   ],
+   "expected_source": {
+    "file": "10_概念·定积分.md",
+    "title": "定积分",
+    "section": "关键点",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "定积分",
+    "牛顿-莱布尼茨"
+   ],
+   "id": 93,
+   "knowledge": "一元积分"
+  },
+  {
+   "type": "综合型",
+   "course": "分析",
+   "module": "分析",
+   "difficulty": "L3",
+   "mode": "calc",
+   "question": "判断级数 Σ_{n=1}^{∞} 1/n² 是否收敛（说明依据）。",
+   "calc_steps": [
+    "通项 1/n² 趋于 0（必要条件满足）",
+    "与 p-级数比较：Σ 1/n^p 当 p>1 时收敛",
+    "p=2>1，故级数 Σ 1/n² 收敛（且收敛于 π²/6）"
+   ],
+   "answer_points": [
+    "通项趋于 0",
+    "p-级数 p=2>1 收敛",
+    "结论：收敛"
+   ],
+   "expected_source": {
+    "file": "20_定理·收敛判别法.md",
+    "title": "收敛判别法",
+    "section": "条件 / 结论",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "数项级数",
+    "收敛判别法",
+    "p-级数"
+   ],
+   "id": 94,
+   "knowledge": "级数"
+  },
+  {
+   "type": "综合型",
+   "course": "线性代数",
+   "module": "线性代数",
+   "difficulty": "L3",
+   "mode": "calc",
+   "question": "计算矩阵乘法 [[1,2],[3,4]] × [[5,6],[7,8]]。",
+   "calc_steps": [
+    "结果矩阵 C 的 (i,j) 元 = A 第 i 行点乘 B 第 j 列",
+    "C₁₁=1·5+2·7=19，C₁₂=1·6+2·8=22",
+    "C₂₁=3·5+4·7=43，C₂₂=3·6+4·8=50",
+    "结果 = [[19,22],[43,50]]"
+   ],
+   "answer_points": [
+    "按行乘列规则",
+    "C₁₁=19, C₁₂=22",
+    "C₂₁=43, C₂₂=50"
+   ],
+   "expected_source": {
+    "file": "10_概念·矩阵.md",
+    "title": "矩阵",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "矩阵",
+    "乘法"
+   ],
+   "id": 95,
+   "knowledge": "线性代数"
+  },
+  {
+   "type": "综合型",
+   "course": "线性代数",
+   "module": "线性代数",
+   "difficulty": "L3",
+   "mode": "calc",
+   "question": "计算二阶行列式 |3 4; 2 5|。",
+   "calc_steps": [
+    "二阶行列式 |a b; c d| = ad - bc",
+    "代入：3·5 - 4·2 = 15 - 8 = 7",
+    "行列式值为 7"
+   ],
+   "answer_points": [
+    "ad-bc 公式",
+    "3·5-4·2",
+    "结果为 7"
+   ],
+   "expected_source": {
+    "file": "10_概念·行列式.md",
+    "title": "行列式",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "行列式"
+   ],
+   "id": 96,
+   "knowledge": "线性代数"
+  },
+  {
+   "type": "综合型",
+   "course": "线性代数",
+   "module": "线性代数",
+   "difficulty": "L3",
+   "mode": "calc",
+   "question": "求矩阵 A=[[1,0],[0,2]] 的特征值。",
+   "calc_steps": [
+    "特征方程 det(A-λI)=0：|1-λ, 0; 0, 2-λ|=0",
+    "(1-λ)(2-λ)=0",
+    "特征值 λ₁=1, λ₂=2"
+   ],
+   "answer_points": [
+    "特征方程 det(A-λI)=0",
+    "(1-λ)(2-λ)=0",
+    "λ₁=1, λ₂=2"
+   ],
+   "expected_source": {
+    "file": "10_概念·特征值.md",
+    "title": "特征值",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "特征值",
+    "特征向量"
+   ],
+   "id": 97,
+   "knowledge": "线性代数"
+  },
+  {
+   "type": "综合型",
+   "course": "概率统计",
+   "module": "概率统计",
+   "difficulty": "L3",
+   "mode": "calc",
+   "question": "掷一颗均匀骰子，已知点数为偶数，求点数为 4 的条件概率。",
+   "calc_steps": [
+    "A={点数为4}，B={点数为偶数}",
+    "P(A∩B)=1/6，P(B)=3/6=1/2",
+    "P(A|B)=P(A∩B)/P(B)=(1/6)/(1/2)=1/3"
+   ],
+   "answer_points": [
+    "P(A∩B)=1/6",
+    "P(B)=1/2",
+    "条件概率=1/3"
+   ],
+   "expected_source": {
+    "file": "10_概念·条件概率.md",
+    "title": "条件概率",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "条件概率",
+    "贝叶斯"
+   ],
+   "id": 98,
+   "knowledge": "概率统计"
+  },
+  {
+   "type": "综合型",
+   "course": "概率统计",
+   "module": "概率统计",
+   "difficulty": "L3",
+   "mode": "calc",
+   "question": "设 X 的分布列为 P(X=1)=0.3，P(X=2)=0.5，P(X=3)=0.2，求 X 的期望 E(X)。",
+   "calc_steps": [
+    "期望定义 E(X)=Σ x·P(X=x)",
+    "E(X)=1·0.3 + 2·0.5 + 3·0.2",
+    "= 0.3 + 1.0 + 0.6 = 1.9"
+   ],
+   "answer_points": [
+    "E(X)=Σ x·P(X=x)",
+    "代入分布列",
+    "E(X)=1.9"
+   ],
+   "expected_source": {
+    "file": "10_概念·期望与方差.md",
+    "title": "期望与方差",
+    "section": "定义",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "期望",
+    "方差"
+   ],
+   "id": 99,
+   "knowledge": "概率统计"
+  },
+  {
+   "type": "综合型",
+   "course": "概率统计",
+   "module": "概率统计",
+   "difficulty": "L3",
+   "mode": "calc",
+   "question": "某随机变量 X~N(0,1)，利用中心极限定理说明大量独立同分布随机变量之和的近似分布。",
+   "calc_steps": [
+    "设 X₁,…,Xₙ 独立同分布，均值 μ、方差 σ²",
+    "标准化和 Sₙ=(ΣXᵢ-nμ)/(σ√n)",
+    "中心极限定理：Sₙ 的分布趋于标准正态 N(0,1)",
+    "故 ΣXᵢ 近似服从 N(nμ, nσ²)"
+   ],
+   "answer_points": [
+    "标准化",
+    "n 足够大时近似正态",
+    "ΣXᵢ ~ N(nμ, nσ²)"
+   ],
+   "expected_source": {
+    "file": "20_定理·中心极限定理.md",
+    "title": "中心极限定理",
+    "section": "条件 / 结论",
+    "pages": "",
+    "book": ""
+   },
+   "keywords": [
+    "中心极限定理",
+    "正态",
+    "大数定律"
+   ],
+   "id": 100,
+   "knowledge": "概率统计"
+  }
+ ]
+}
