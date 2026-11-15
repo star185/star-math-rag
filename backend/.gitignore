@@ -1,0 +1,7 @@
+# 运行时生成的安全与状态文件，不入库
+storage/secret_key.txt
+storage/*.db
+storage/*.sqlite3
+storage/vectors/
+storage/uploads/
+__pycache__/

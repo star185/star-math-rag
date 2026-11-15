@@ -1,0 +1,73 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# ===== 环境变量与密钥（切勿提交）=====
+.env
+.env.*
+!.env.example
+**/secret_key.txt
+
+# ===== 运行时数据：数据库、向量库、上传文件、题目图片 =====
+backend/storage/*.db
+backend/storage/*.db.bak_*
+backend/storage/*.sqlite3
+backend/storage/vectors/
+backend/storage/uploads/
+backend/storage/exercises/
+backend/storage/*.log
+
+# ===== 依赖、第三方二进制与构建产物 =====
+node_modules/
+dist/
+backend/bin/
+
+# ===== 开发过程残留：调试脚本、临时输出、文件备份 =====
+backend/_chk*
+backend/_dbg*
+backend/_js_*
+backend/_kmath_inline*
+backend/scripts/_probe_out*
+docs/_count_routes.py
+docs/_tbl_fields.py
+docs/figs_err.txt
+*.bak
+*.bak_*
+llm_test_out.txt
+mimo-test.log
+backend/server.log
+backend/server.err
+
+# ===== 本地工具缓存 =====
+你的安装目录/
+
+# ===== 备份目录 =====
+*_backup_*/
+*_backup/
+**/frontend_backup_pre_exercise_*/
+
+# ===== 文档草稿与生成日志 =====
+docs/*_log.txt
+docs/tpl_*.md
+docs/template_*.md
+docs/canvas_rewrite_v2/
+docs/AI工具规范说明.txt
+
+# ===== 毕业设计报告与论文相关（不公开）=====
+*.docx
+*.pdf
+
+# ===== 截图只保留最终效果图（01-07）=====
+ui_shots/00*
+ui_shots/00b*
+ui_shots/08_*
+ui_shots/09_*
+ui_shots/1[0-9]_*
+ui_shots/2[0-9]_*
+
+# ===== IDE =====
+.idea/
+.vscode/
