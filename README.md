@@ -71,7 +71,9 @@ python scripts/ingest_kb.py --path "你的知识库目录"
 python run.py
 ```
 
-也可双击 `start.bat`（Windows）一键拉起后端并打开浏览器。访问 <http://127.0.0.1:8000>，初始账号 `admin` / `admin123`。
+也可双击 `start.bat`（Windows）一键拉起后端并打开浏览器。访问 <http://127.0.0.1:8000>。
+
+管理员账号由 `backend/.env` 中的 `DEFAULT_ADMIN_USER` / `DEFAULT_ADMIN_PASSWORD` 决定，首次启动创建用户时写入数据库；若用户已存在，则沿用数据库中的口令，修改配置不会自动覆盖已有账号。
 
 ## 主要接口
 
