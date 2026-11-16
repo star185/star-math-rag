@@ -10,7 +10,8 @@
 - **检索与问答**：向量语义 + BM25 关键词双路召回，RRF 融合排序，SSE 流式输出，回答附带来源片段与引用编号
 - **检索评测**：内置 100 题标注测试集，支持 RAG 与基线（直调大模型）对照、单题与批量评测
 - **上传解题**：上传图片或文档 → OCR 识别题面（RapidOCR 离线，可切换视觉大模型）→ LLM 结构化切题 → 逐题检索并生成思路、分步解答、答案与知识点 → 归档习题册并导出 Markdown
-- **会话与权限**：JWT 鉴权，会话历史按用户隔离
+- **鉴权与会话**：scrypt 口令哈希（旧 sha256 账号登录时自动升级）、HMAC 签名令牌 + token_epoch 版本控制（改密后旧令牌立即失效）、登录失败限流、防用户名枚举的密码找回（一次性重置码 + 冷却）、邀请码注册；会话历史按用户隔离
+- **自动化测试**：19 项 pytest 覆盖鉴权一致性、检索链路与向量库
 
 ![测试与评估](ui_shots/04_after_eval.png)
 
@@ -18,7 +19,7 @@
 
 | 层 | 技术 |
 |---|---|
-| 后端 | Python、FastAPI、Uvicorn、SQLite、自建向量库（numpy 余弦相似度）、纯内存 BM25、JWT |
+| 后端 | Python、FastAPI、Uvicorn、SQLite、自建向量库（numpy 余弦相似度）、纯内存 BM25、scrypt 口令哈希 + HMAC 签名令牌 |
 | 检索 | 向量召回 + BM25 + RRF（k=60）融合；jieba 分词，缺失时回退字符 n-gram |
 | 生成 | OpenAI 兼容 Chat Completions，SSE 流式；未配置密钥时降级为本地抽取模式 |
 | OCR | RapidOCR（本地离线），可选 pix2text 或视觉大模型 |
@@ -46,6 +47,8 @@
 | **混合（hybrid）** | **98.0%** | **99.0%** | **100%** | **0.9858** |
 
 分模块看，关键词检索在概率统计模块的 hit@1 仅 78.6%，混合后回升至 92.9%——双路互补在术语密度低、表述多样的模块上收益最明显。评测脚本见 `backend/scripts/eval_retrieval.py`，原始结果见 `backend/storage/eval_retrieval.json`。
+
+**但这组数字不能直接用来比较检索算法优劣。** 按 [docs/项目审计报告.md](docs/项目审计报告.md) 的消融实验：hit@1 的 98% 中约 72 个百分点来自标题匹配加权规则，纯 RRF 融合仅贡献 23 个百分点；且 96/100 道题的题干直接包含期望文档的概念名，构成词面泄漏（lexical leakage），三路检索的指标因此失去区分度。结论是这组数据可用于验证链路连通、但不适合论证混合检索优于单路——重构测试集（改写题干、避免概念名直出）是后续要做的第一件事。
 
 ## 快速开始
 
@@ -94,16 +97,40 @@ python run.py
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| POST | `/api/auth/login` | 登录，返回 JWT |
+| POST | `/api/auth/login` | 登录，返回签名令牌 |
+| POST | `/api/auth/register` | 注册（需邀请码） |
+| POST | `/api/auth/forgot-password` | 申请重置（返回统一提示，不暴露账号是否存在） |
+| POST | `/api/auth/reset-password` | 凭一次性重置码改密 |
+| POST | `/api/auth/change-password` | 已登录状态改密（旧令牌立即失效） |
+| GET | `/api/me` | 当前用户 |
 | POST | `/api/docs/upload` | 上传文档并入库 |
+| GET | `/api/docs/{id}` | 文档详情（含分块预览） |
 | POST | `/api/kb/ingest-folder` | 批量导入目录 |
 | POST | `/api/chat` | RAG 问答（SSE 流式） |
 | POST | `/api/search/debug` | 检索调试（可切换 hybrid/vector/keyword） |
 | POST | `/api/eval/run` | 单题评测 |
+| GET | `/api/eval/metrics` | 检索指标汇总 |
 | GET | `/api/test-questions` | 测试问题集 |
 | POST | `/api/exercises/upload` | 上传文档/图片，识别习题 |
 | POST | `/api/exercises/{id}/solve` | 逐题 RAG 解题（SSE 流式） |
 | GET | `/api/exercises/export` | 导出习题册 Markdown |
+| POST | `/api/admin/users/{id}/reset-code` | 管理员签发重置码 |
+| GET | `/api/admin/password-requests` | 查看待处理的找回申请 |
+
+## 测试
+
+```bash
+cd backend
+.venv\Scripts\activate
+pip install -r requirements-dev.txt
+pytest -q
+```
+
+当前 19 项用例全部通过（约 2 秒），覆盖：
+
+- **鉴权一致性**：`main` / `exercise` / `practice` 三处鉴权行为相同；旧 token_epoch 的令牌在两处受限接口上都返回 401；未知用户的令牌被拒；旧 sha256 账号登录后自动升级为 scrypt；scrypt 往返校验；连续失败达阈值返回 429
+- **检索**：混合检索融合结果与来源字段
+- **向量库**：写入、检索与索引自愈
 
 ## 目录结构
 
@@ -113,19 +140,27 @@ backend/
     main.py           # 路由与接口
     vector_store.py   # 向量库 + BM25 + RRF 融合
     rag.py            # 检索与生成链路
-    parsers.py        # 文档解析
+    parsers.py        # 文档解析（含父子分块）
     exercise.py       # 上传解题与习题册
-    llm.py            # LLM 客户端
-    security.py       # JWT 鉴权
-  scripts/            # 入库、评测、出题脚本
+    practice.py       # 练习与判分
+    llm.py            # LLM 客户端与流式解析
+    security.py       # 口令哈希与令牌
+    quota.py          # LLM 每日配额
+    deps.py           # 统一鉴权依赖
+    errors.py         # 统一错误码与用户可见提示
+    logging_setup.py  # 日志初始化
+  tests/              # pytest 用例
+  scripts/            # 入库、评测、出题、安全打包脚本
   data/               # 100 题测试集
 frontend/             # 原生 JS 前端
 ui_shots/             # 界面截图
+docs/                 # 设计说明与项目审计报告
 ```
 
 ## 已知限制
 
-- 测试集为单人标注，未做双人一致性校验；hit@K 衡量的是"是否命中期望章节"，不等于生成答案的完整正确率
+- 测试集为单人标注，且存在词面泄漏（见上文评测一节），指标不能用于比较检索算法；未做双人一致性校验
 - 向量库为本地文件实现，规模限于千级片段；数据量增大后需要改用专用向量数据库
-- 单机单用户演示定位，未做并发压测与权限分级
+- 单机单用户演示定位，未做并发压测与细粒度权限分级
+- 审计报告列出的 P0/P1 项已修复其中大部分，剩余项与处理状态见 [docs/项目审计报告.md](docs/项目审计报告.md)
 - LLM 令牌有时效，过期后问答接口返回 401，需重新签发
