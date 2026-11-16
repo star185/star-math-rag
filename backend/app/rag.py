@@ -2,12 +2,15 @@
 """RAG 编排：检索、组装、生成。"""
 from __future__ import annotations
 
+import logging
 import time
 from typing import Any, Callable, Iterator
 
 from .config import RETRIEVAL_MODE, TOP_K
 from .llm import build_messages, llm_configured, stream_chat_completion
 from .vector_store import STORE
+
+logger = logging.getLogger(__name__)
 
 
 import re
@@ -177,7 +180,8 @@ def answer_stream(
             buf.append(token)
             yield {"type": "token", "data": token}
     except Exception as e:
-        err = f"生成出错: {e}"
+        logger.exception("问答生成失败: %s", e)
+        err = "生成出错，请稍后重试"
         yield {"type": "token", "data": err}
         buf.append(err)
 

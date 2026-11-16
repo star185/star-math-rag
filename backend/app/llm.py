@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import urllib.error
 import urllib.request
@@ -18,6 +19,8 @@ from .config import (
 
 # 输出被 max_tokens 截断的标记（生成器内部传递用，不会作为文本下发）
 TRUNCATED_MARK = "\x00__TRUNCATED__\x00"
+
+logger = logging.getLogger(__name__)
 
 
 def llm_configured() -> bool:
@@ -124,7 +127,8 @@ def stream_chat_completion(messages: list[dict]):
             else:
                 yield piece
     except Exception as e:
-        yield f"\n\n[生成失败: {e}]"
+        logger.exception("流式生成失败: %s", e)
+        yield "\n\n[生成失败，请检查模型配置或稍后重试]"
 
 
 def extractive_answer_from_messages(messages: list[dict]) -> str:

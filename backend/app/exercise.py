@@ -13,16 +13,16 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
-import shutil
 import time
 from pathlib import Path
-from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import PlainTextResponse, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
+from . import quota
 from .config import (
     EXERCISE_MAX_MB,
     EXERCISE_UPLOAD_DIR,
@@ -33,10 +33,13 @@ from .config import (
     VISION_LLM_MODEL,
 )
 from .db import dumps, get_conn, loads
+from .deps import get_current_user
+from .errors import fail
 from .llm import chat_completion, llm_configured, stream_chat_completion
 from .parsers import IMAGE_SUFFIXES, extract_docx_images, ocr_image, parse_document, parse_frontmatter
 from .rag import retrieve
-from .security import parse_token
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/exercises", tags=["exercises"])
 
@@ -44,28 +47,7 @@ DOC_SUFFIXES = {".md", ".markdown", ".txt", ".docx", ".pdf"}
 TEXT_SUFFIXES = {".md", ".markdown", ".txt", ".docx", ".pdf"}
 
 
-# ---------- 鉴权（与 main.get_current_user 同逻辑，避免循环依赖） ----------
-def current_user(authorization: Optional[str] = Header(None)) -> dict:
-    if not authorization or not authorization.lower().startswith("bearer "):
-        raise HTTPException(status_code=401, detail="未登录")
-    payload = parse_token(authorization.split(" ", 1)[1].strip())
-    if not payload:
-        raise HTTPException(status_code=401, detail="登录已过期")
-    try:
-        with get_conn() as conn:
-            row = conn.execute(
-                "SELECT id,username,role,can_download FROM users WHERE id=?",
-                (payload.get("uid"),),
-            ).fetchone()
-            if row:
-                payload["username"] = row["username"]
-                payload["role"] = row["role"]
-                payload["can_download"] = bool(row["can_download"])
-    except Exception:
-        payload.setdefault("can_download", False)
-    return payload
-
-
+# ---------- 鉴权：统一使用 app/deps.py，避免多份实现漂移 ----------
 def _get_source(conn, source_id: int, uid: int):
     row = conn.execute(
         "SELECT * FROM exercise_sources WHERE id=? AND user_id=?", (source_id, uid)
@@ -299,9 +281,10 @@ def _solve_one(question: dict) -> dict:
             "sources": retrieve(stem, top_k=SOLVE_TOP_K, mode="hybrid"),
         }
     except Exception as e:
+        logger.exception("单题解题失败: %s", e)
         return {
             "answer": question.get("answer") or "",
-            "solution": f"（解题失败: {e}）",
+            "solution": "（解题失败，请稍后重试）",
             "explanation": "",
             "knowledge": "数学",
             "difficulty": _estimate_difficulty(stem),
@@ -311,7 +294,8 @@ def _solve_one(question: dict) -> dict:
 
 # ---------- API ----------
 class SolveIn(BaseModel):
-    questions: list[dict] = []
+    # 题面以服务端识别结果为准，这里只为兼容旧前端保留字段
+    questions: list[dict] = Field(default_factory=list, max_length=SOLVE_MAX_QUESTIONS)
 
 
 class SaveItem(BaseModel):
@@ -334,7 +318,7 @@ class SaveIn(BaseModel):
 @router.post("/upload")
 def upload_exercises(
     file: UploadFile = File(...),
-    user: dict = Depends(current_user),
+    user: dict = Depends(get_current_user),
 ):
     """上传文档/图片，解析并识别习题，登记来源后返回题目列表。"""
     filename = Path(file.filename or "upload.bin").name
@@ -343,13 +327,20 @@ def upload_exercises(
         raise HTTPException(400, f"不支持格式: {suffix}（支持 md/txt/docx/pdf 与 png/jpg/jpeg/webp/bmp）")
     EXERCISE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     dest = EXERCISE_UPLOAD_DIR / f"{int(time.time() * 1000)}_{filename}"
+    # 边收边数：超限立即中断，避免 10GB 文件先落盘再报"过大"
+    limit = EXERCISE_MAX_MB * 1024 * 1024
     size = 0
     with dest.open("wb") as f:
-        shutil.copyfileobj(file.file, f)
-        size = dest.stat().st_size
-    if size > EXERCISE_MAX_MB * 1024 * 1024:
-        dest.unlink(missing_ok=True)
-        raise HTTPException(400, f"文件过大，上限 {EXERCISE_MAX_MB}MB")
+        while True:
+            chunk = file.file.read(65536)
+            if not chunk:
+                break
+            size += len(chunk)
+            if size > limit:
+                f.close()
+                dest.unlink(missing_ok=True)
+                raise fail(413, "E_UPLOAD_TOO_LARGE", f"文件过大，上限 {EXERCISE_MAX_MB}MB")
+            f.write(chunk)
     try:
         text = _extract_source_text(dest, suffix)
         if not (text or "").strip():
@@ -387,17 +378,28 @@ def upload_exercises(
         raise
     except Exception as e:
         dest.unlink(missing_ok=True)
-        raise HTTPException(500, f"解析失败: {e}")
+        raise fail(500, "E_EXERCISE_PARSE", "解析失败，请确认文件内容后重试", exc=e, file=filename)
 
 
 @router.post("/{source_id}/solve")
-def solve(source_id: int, body: SolveIn, user: dict = Depends(current_user)):
-    """SSE 流式逐题解题。"""
+def solve(source_id: int, body: SolveIn, user: dict = Depends(get_current_user)):
+    """SSE 流式逐题解题。
+
+    题目一律以服务端保存的识别结果为准：客户端传入的 questions 只当噪声忽略，
+    否则任何登录用户都能让服务器对任意文本执行 RAG + LLM（费用放大）。
+    """
     with get_conn() as conn:
         src = _get_source(conn, source_id, user.get("uid"))
-        questions = body.questions or loads(src.get("questions_json"), [])
+    questions = loads(src["questions_json"], [])[:SOLVE_MAX_QUESTIONS]
+    if body.questions:
+        logger.info(
+            "solve 忽略客户端提交的 %d 道题 source=%s user=%s",
+            len(body.questions), source_id, user.get("uid"),
+        )
     if not questions:
         raise HTTPException(400, "没有可解题的题目")
+    # 按题目数量占用当日配额：真实成本 = 题目数 × 一次 LLM 调用
+    quota.consume(user.get("uid"), cost=len(questions))
 
     def event_stream():
         try:
@@ -410,7 +412,8 @@ def solve(source_id: int, body: SolveIn, user: dict = Depends(current_user)):
                 yield f"data: {json.dumps({'type': 'solve_done', 'data': {'qno': qno, **result}}, ensure_ascii=False)}\n\n"
             yield f"data: {json.dumps({'type': 'done', 'source_id': source_id}, ensure_ascii=False)}\n\n"
         except Exception as e:
-            yield f"data: {json.dumps({'type': 'error', 'detail': str(e)}, ensure_ascii=False)}\n\n"
+            logger.exception("解题流中断 source=%s: %s", source_id, e)
+            yield f"data: {json.dumps({'type': 'error', 'detail': '解题中断，请稍后重试'}, ensure_ascii=False)}\n\n"
 
     return StreamingResponse(
         event_stream(),
@@ -420,7 +423,7 @@ def solve(source_id: int, body: SolveIn, user: dict = Depends(current_user)):
 
 
 @router.post("/save")
-def save_items(body: SaveIn, user: dict = Depends(current_user)):
+def save_items(body: SaveIn, user: dict = Depends(get_current_user)):
     """批量存入习题册（同来源同题号已存在时更新）。"""
     if not body.items:
         raise HTTPException(400, "没有可保存的题目")
@@ -483,7 +486,7 @@ def list_items(
     qtype: str = "",
     status: str = "",
     limit: int = 200,
-    user: dict = Depends(current_user),
+    user: dict = Depends(get_current_user),
 ):
     """习题册列表（按来源分组信息 + 题目列表）。"""
     sql = "SELECT i.*, s.name AS source_name, s.source_type AS source_type, s.path AS source_path, s.format AS source_format, s.created_at AS source_created_at FROM exercise_items i JOIN exercise_sources s ON i.source_id=s.id WHERE i.user_id=?"
@@ -537,7 +540,7 @@ def list_items(
 
 
 @router.get("/export")
-def export_exercises(user: dict = Depends(current_user)):
+def export_exercises(user: dict = Depends(get_current_user)):
     data = list_items(limit=500, user=user)
     recs = data["items"]
     date_str = time.strftime("%Y-%m-%d %H:%M")
@@ -587,7 +590,7 @@ def export_exercises(user: dict = Depends(current_user)):
 
 
 @router.get("/{item_id}")
-def get_item(item_id: int, user: dict = Depends(current_user)):
+def get_item(item_id: int, user: dict = Depends(get_current_user)):
     with get_conn() as conn:
         row = conn.execute(
             "SELECT i.*, s.name AS source_name, s.source_type AS source_type, s.path AS source_path, s.format AS source_format "
@@ -618,7 +621,7 @@ def get_item(item_id: int, user: dict = Depends(current_user)):
 
 
 @router.delete("/{item_id}")
-def delete_item(item_id: int, user: dict = Depends(current_user)):
+def delete_item(item_id: int, user: dict = Depends(get_current_user)):
     with get_conn() as conn:
         row = conn.execute(
             "SELECT id FROM exercise_items WHERE id=? AND user_id=?", (item_id, user.get("uid"))
@@ -630,7 +633,7 @@ def delete_item(item_id: int, user: dict = Depends(current_user)):
 
 
 @router.delete("/source/{source_id}")
-def delete_source(source_id: int, user: dict = Depends(current_user)):
+def delete_source(source_id: int, user: dict = Depends(get_current_user)):
     with get_conn() as conn:
         src = _get_source(conn, source_id, user.get("uid"))
         conn.execute("DELETE FROM exercise_items WHERE source_id=?", (source_id,))
@@ -661,7 +664,7 @@ def _norm_concept(t: str) -> str:
 
 
 @router.post("/knowledge/lookup")
-def lookup_knowledge(body: dict, user: dict = Depends(current_user)):
+def lookup_knowledge(body: dict, user: dict = Depends(get_current_user)):
     """按知识点标签在知识库「概念卡」中精确匹配，只有真命中才返回 doc_id。
     body: {topic: str}
     返回: {doc_id: int|None, name: str|None, matched: bool}
@@ -698,7 +701,7 @@ def lookup_knowledge(body: dict, user: dict = Depends(current_user)):
 
 
 @router.post("/knowledge/explain")
-def explain_knowledge(body: dict, user: dict = Depends(current_user)):
+def explain_knowledge(body: dict, user: dict = Depends(get_current_user)):
     """知识库里没有对应概念卡时，用 DeepSeek 即时生成一段通俗解释。
     body: {topic: str}
     返回: {explain: str, source: "llm"}
@@ -707,6 +710,7 @@ def explain_knowledge(body: dict, user: dict = Depends(current_user)):
     if not topic:
         return {"explain": "", "source": "llm"}
     from .llm import chat_completion
+    quota.consume(user.get("uid"), cost=1)
     prompt = (
         f"你是一名大学数学助教。请用本科生能听懂的话，用 150~250 字通俗解释「{topic}」："
         f"它是什么、怎么用、典型题型。不要堆复杂公式，必要时用一行简单公式即可。"
@@ -716,7 +720,8 @@ def explain_knowledge(body: dict, user: dict = Depends(current_user)):
         text = chat_completion([{"role": "user", "content": prompt}])
         return {"explain": (text or "").strip(), "source": "llm"}
     except Exception as e:
-        return {"explain": f"（LLM 解释生成失败：{e}）", "source": "llm"}
+        logger.exception("知识点解释生成失败 topic=%s: %s", topic, e)
+        return {"explain": "（AI 解释生成失败，请稍后重试）", "source": "llm"}
 
 
 # ---------- 相似习题检测：上传后在习题库中查重，避免重复存入 ----------
@@ -735,7 +740,7 @@ def _norm_stem(t: str) -> str:
 
 
 @router.post("/similar")
-def find_similar(body: dict, user: dict = Depends(current_user)):
+def find_similar(body: dict, user: dict = Depends(get_current_user)):
     """根据题面文本在已存习题库中检索相似题，top_k 条，按相似度降序。
     body: {stem: str, top_k: int=5}
     返回: {items: [{id, qno, source_name, question, difficulty, similarity}]}

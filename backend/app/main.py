@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import json
-import shutil
+import logging
 import time
 from pathlib import Path
 from typing import Optional
 
-from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
@@ -23,68 +22,54 @@ from .config import (
     CHUNK_SIZE,
     DEFAULT_ADMIN_PASSWORD,
     DEFAULT_ADMIN_USER,
+    DOC_MAX_MB,
     KB_SOURCE_DIR,
+    LLM_DAILY_LIMIT,
+    LOGIN_BACKOFF_MAX,
+    LOGIN_BACKOFF_WINDOW,
+    LOGIN_MAX_FAILURES,
     LOGIN_REMEMBER_TTL,
     LOGIN_SHORT_TTL,
+    PASSWORD_RESET_COOLDOWN,
+    PASSWORD_RESET_MAX_ATTEMPTS,
+    PASSWORD_RESET_TTL,
     REGISTER_INVITE_CODE,
     RETRIEVAL_MODE,
     TOP_K,
     UPLOAD_DIR,
 )
 from .db import dumps, get_conn, init_db, loads, now, row_to_dict
+from .deps import can_download, get_current_user, require_admin, require_download
+from .errors import fail
 from .exercise import router as exercise_router
 from .llm import llm_configured
+from .logging_setup import setup_logging
 from .parsers import parse_document, parse_frontmatter, split_text
 from .practice import router as practice_router
 from .rag import answer_stream
-from .security import create_token, hash_password, parse_token, verify_password
+from .security import (
+    create_token,
+    generate_reset_code,
+    hash_password,
+    needs_rehash,
+    verify_password,
+)
 from .vector_store import STORE
+
+setup_logging()
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title=APP_NAME, version=APP_VERSION)
 app.include_router(practice_router)
 app.include_router(exercise_router)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+
+# 无下载权限的用户能看到的原文预览上限（字符）
+PREVIEW_CHARS = 4000
 
 
 # ---------- auth helpers ----------
-def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
-    if not authorization or not authorization.lower().startswith("bearer "):
-        raise HTTPException(status_code=401, detail="未登录")
-    payload = parse_token(authorization.split(" ", 1)[1].strip())
-    if not payload:
-        raise HTTPException(status_code=401, detail="登录已过期")
-    # 从库中同步最新权限（便于管理员即时改权）
-    try:
-        with get_conn() as conn:
-            row = conn.execute(
-                "SELECT id,username,role,can_download FROM users WHERE id=?",
-                (payload.get("uid"),),
-            ).fetchone()
-            if row:
-                payload["username"] = row["username"]
-                payload["role"] = row["role"]
-                payload["can_download"] = bool(row["can_download"])
-    except Exception:
-        payload.setdefault("can_download", False)
-    return payload
-
-
-def require_admin(user: dict = Depends(get_current_user)) -> dict:
-    if user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="需要管理员权限")
-    return user
-
-
-def require_download(user: dict = Depends(get_current_user)) -> dict:
-    if user.get("role") == "admin" or user.get("can_download"):
-        return user
-    raise HTTPException(status_code=403, detail="没有下载权限，请联系管理员开通")
+# get_current_user / require_admin / require_download 统一由 app/deps.py 提供，
+# main、exercise、practice 三个模块共用同一实现（含改密后 token_epoch 失效校验）。
 
 
 # ---------- schemas ----------
@@ -103,6 +88,32 @@ class LoginIn(BaseModel):
     username: str
     password: str
     remember: bool = False
+
+
+class ForgotIn(BaseModel):
+    username: str = Field(min_length=1, max_length=64)
+
+
+class ResetIn(BaseModel):
+    username: str = Field(min_length=1, max_length=64)
+    code: str = Field(min_length=4, max_length=32)
+    new_password: str = Field(min_length=6, max_length=128)
+
+
+class ChangePasswordIn(BaseModel):
+    old_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=6, max_length=128)
+
+
+class AdminResetIn(BaseModel):
+    new_password: str = ""
+
+
+class InviteIn(BaseModel):
+    code: str = ""
+    note: str = ""
+    max_uses: int = 0          # 0 = 不限次
+    expires_in_days: int = 0   # 0 = 不限期
 
 
 class ChatIn(BaseModel):
@@ -183,40 +194,151 @@ def on_startup():
             )
         else:
             conn.execute("UPDATE users SET role='admin', can_download=1 WHERE username=?", (DEFAULT_ADMIN_USER,))
+        # 把 .env 中的静态邀请码导入 invites 表作为种子，之后统一在设置页管理
+        if REGISTER_INVITE_CODE:
+            got = conn.execute("SELECT id FROM invites WHERE code=?", (REGISTER_INVITE_CODE,)).fetchone()
+            if not got:
+                conn.execute(
+                    """INSERT INTO invites(code,note,max_uses,used_count,expires_at,disabled,created_by,created_at)
+                       VALUES(?,?,?,?,?,?,?,?)""",
+                    (REGISTER_INVITE_CODE, "启动时从 .env 导入（不限次、不限期）", 0, 0, 0, 0, 0, now()),
+                )
 
 
 # ---------- auth api ----------
+class _LoginThrottle:
+    """登录失败退避：按 username+IP 计数，超阈值后指数等待（单进程内存即可）。"""
+
+    def __init__(self) -> None:
+        import threading
+
+        self._lock = threading.Lock()
+        self._fails: dict[str, list[float]] = {}
+
+    def _recent(self, key: str) -> list[float]:
+        cutoff = time.time() - LOGIN_BACKOFF_WINDOW
+        ts = [t for t in self._fails.get(key, []) if t > cutoff]
+        if ts:
+            self._fails[key] = ts
+        else:
+            self._fails.pop(key, None)
+        return ts
+
+    def retry_after(self, key: str) -> int:
+        with self._lock:
+            ts = self._recent(key)
+            if len(ts) < LOGIN_MAX_FAILURES:
+                return 0
+            delay = min(2 ** (len(ts) - LOGIN_MAX_FAILURES), LOGIN_BACKOFF_MAX)
+            wait = int(ts[-1] + delay - time.time())
+            return max(wait, 1) if wait > 0 else 0
+
+    def record_failure(self, key: str) -> None:
+        with self._lock:
+            self._fails.setdefault(key, []).append(time.time())
+
+    def reset(self, key: str) -> None:
+        with self._lock:
+            self._fails.pop(key, None)
+
+
+_login_throttle = _LoginThrottle()
+
+
+def _consume_invite(conn, code: str) -> int | None:
+    """校验并消费邀请码，成功返回 invite id（0 表示 .env 静态兜底码），无效返回 None。"""
+    code = (code or "").strip()
+    if not code:
+        return None
+    row = conn.execute("SELECT * FROM invites WHERE code=?", (code,)).fetchone()
+    if row:
+        if row["disabled"]:
+            return None
+        if float(row["expires_at"] or 0) and float(row["expires_at"]) < now():
+            return None
+        if int(row["max_uses"] or 0) and int(row["used_count"] or 0) >= int(row["max_uses"]):
+            return None
+        conn.execute("UPDATE invites SET used_count=used_count+1 WHERE id=?", (row["id"],))
+        return int(row["id"])
+    if REGISTER_INVITE_CODE and code == REGISTER_INVITE_CODE:
+        return 0
+    return None
+
+
+def _invite_required(conn) -> bool:
+    """配置了静态码，或 invites 表里还有启用中的码时，注册必须带邀请码。"""
+    if REGISTER_INVITE_CODE:
+        return True
+    row = conn.execute("SELECT COUNT(*) AS c FROM invites WHERE disabled=0").fetchone()
+    return bool(row and row["c"])
+
+
 @app.post("/api/auth/register")
 def register(body: RegisterIn):
-    # 注册邀请码（借鉴 RAGFlow 用户体系：REGISTER_INVITE_CODE 非空时强制校验）
-    if REGISTER_INVITE_CODE and (body.invite_code or "").strip() != REGISTER_INVITE_CODE:
-        raise HTTPException(403, "邀请码错误")
     with get_conn() as conn:
-        exists = conn.execute("SELECT id FROM users WHERE username=?", (body.username,)).fetchone()
-        if exists:
+        if conn.execute("SELECT id FROM users WHERE username=?", (body.username,)).fetchone():
             raise HTTPException(400, "用户名已存在")
+        invite_id = 0
+        if _invite_required(conn):
+            consumed = _consume_invite(conn, body.invite_code)
+            if consumed is None:
+                raise HTTPException(403, "邀请码无效、已过期或已用尽，请向管理员索取新的邀请码")
+            invite_id = consumed
         pwd, salt = hash_password(body.password)
         cur = conn.execute(
-            "INSERT INTO users(username,password_hash,salt,role,can_download,created_at) VALUES(?,?,?,?,?,?)",
-            (body.username, pwd, salt, "user", 0, now()),
+            "INSERT INTO users(username,password_hash,salt,role,can_download,invited_by,created_at) VALUES(?,?,?,?,?,?,?)",
+            (body.username, pwd, salt, "user", 0, invite_id, now()),
         )
         uid = cur.lastrowid
-    token = create_token(uid, body.username, "user", ttl=LOGIN_SHORT_TTL)
+    token = create_token(uid, body.username, "user", ttl=LOGIN_SHORT_TTL, epoch=0)
     return {
         "token": token,
-        "user": {"id": uid, "username": body.username, "role": "user", "can_download": False},
+        "user": {
+            "id": uid,
+            "username": body.username,
+            "role": "user",
+            "can_download": False,
+            "must_change_password": False,
+        },
     }
 
 
 @app.post("/api/auth/login")
-def login(body: LoginIn):
+def login(body: LoginIn, request: Request):
+    client_ip = (request.client.host if request.client else "") or "-"
+    key = f"{(body.username or '').strip().lower()}|{client_ip}"
+    wait = _login_throttle.retry_after(key)
+    if wait:
+        raise fail(429, "E_LOGIN_THROTTLED", f"尝试次数过多，请 {wait} 秒后再试", retry_after=wait)
+
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM users WHERE username=?", (body.username,)).fetchone()
     if not row or not verify_password(body.password, row["password_hash"], row["salt"]):
+        _login_throttle.record_failure(key)
+        logger.info("登录失败 user=%s ip=%s", body.username, client_ip)
         raise HTTPException(401, "用户名或密码错误")
+    _login_throttle.reset(key)
+    # 旧库单轮 sha256 的账号，登录成功时顺势升级为 scrypt
+    if needs_rehash(row["password_hash"]):
+        try:
+            new_hash, new_salt = hash_password(body.password)
+            with get_conn() as conn:
+                conn.execute(
+                    "UPDATE users SET password_hash=?, salt=? WHERE id=?",
+                    (new_hash, new_salt, row["id"]),
+                )
+            logger.info("口令哈希已升级为 scrypt user=%s", row["username"])
+        except Exception as e:
+            logger.warning("口令哈希升级失败 user=%s: %s", row["username"], e)
     # 记住我：长有效期；否则短有效期
     ttl = LOGIN_REMEMBER_TTL if body.remember else LOGIN_SHORT_TTL
-    token = create_token(row["id"], row["username"], row["role"], ttl=ttl)
+    token = create_token(
+        row["id"],
+        row["username"],
+        row["role"],
+        ttl=ttl,
+        epoch=int(row["token_epoch"] or 0) if "token_epoch" in row.keys() else 0,
+    )
     return {
         "token": token,
         "user": {
@@ -224,6 +346,9 @@ def login(body: LoginIn):
             "username": row["username"],
             "role": row["role"],
             "can_download": bool(row["can_download"]) if "can_download" in row.keys() else row["role"] == "admin",
+            "must_change_password": bool(row["must_change_password"])
+            if "must_change_password" in row.keys()
+            else False,
         },
     }
 
@@ -231,6 +356,102 @@ def login(body: LoginIn):
 @app.get("/api/me")
 def me(user: dict = Depends(get_current_user)):
     return {"user": user}
+
+
+# ---------- 忘记密码：申请 → 管理员发一次性重置码 → 自助改密 ----------
+_FORGOT_HINT = "已提交申请，请向管理员索取一次性重置码（10 分钟内有效）"
+
+
+@app.post("/api/auth/forgot-password")
+def forgot_password(body: ForgotIn):
+    # 无论用户名是否存在都返回同一提示，避免用户名枚举
+    username = (body.username or "").strip()
+    if not username:
+        return {"ok": True, "message": _FORGOT_HINT}
+    with get_conn() as conn:
+        row = conn.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
+        if row:
+            uid = row["id"]
+            last = conn.execute(
+                "SELECT created_at FROM password_resets WHERE user_id=? ORDER BY id DESC LIMIT 1",
+                (uid,),
+            ).fetchone()
+            cooling = bool(last) and now() - float(last["created_at"] or 0) < PASSWORD_RESET_COOLDOWN
+            if not cooling:
+                # 旧申请作废，避免管理员看到一堆过期请求
+                conn.execute(
+                    "UPDATE password_resets SET status='cancelled' WHERE user_id=? AND status IN ('requested','issued')",
+                    (uid,),
+                )
+                conn.execute(
+                    """INSERT INTO password_resets(user_id,code_hash,salt,status,attempts,expires_at,used_at,created_by,created_at)
+                       VALUES(?,?,?,?,?,?,?,?,?)""",
+                    (uid, "", "", "requested", 0, 0, 0, 0, now()),
+                )
+    return {"ok": True, "message": _FORGOT_HINT}
+
+
+@app.post("/api/auth/reset-password")
+def reset_password(body: ResetIn):
+    username = (body.username or "").strip()
+    code = (body.code or "").strip().upper()
+    # get_conn 在抛异常时回滚，因此校验失败先记录、出事务后再抛，保证试错计数落库
+    error: tuple[int, str] | None = None
+    with get_conn() as conn:
+        urow = conn.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
+        rec = None
+        if urow:
+            rec = conn.execute(
+                "SELECT * FROM password_resets WHERE user_id=? AND status='issued' ORDER BY id DESC LIMIT 1",
+                (urow["id"],),
+            ).fetchone()
+        if not urow or not rec:
+            error = (400, "重置码无效或已过期，请向管理员重新索取")
+        elif float(rec["expires_at"] or 0) < now():
+            conn.execute("UPDATE password_resets SET status='expired' WHERE id=?", (rec["id"],))
+            error = (400, "重置码已过期，请向管理员重新索取")
+        elif int(rec["attempts"] or 0) >= PASSWORD_RESET_MAX_ATTEMPTS:
+            conn.execute("UPDATE password_resets SET status='locked' WHERE id=?", (rec["id"],))
+            error = (429, "重置码错误次数过多已作废，请向管理员重新索取")
+        elif not verify_password(code, rec["code_hash"], rec["salt"]):
+            conn.execute("UPDATE password_resets SET attempts=attempts+1 WHERE id=?", (rec["id"],))
+            left = PASSWORD_RESET_MAX_ATTEMPTS - int(rec["attempts"] or 0) - 1
+            error = (400, f"重置码错误，还可尝试 {max(left, 0)} 次")
+        if not error:
+            pwd, salt = hash_password(body.new_password)
+            conn.execute(
+                "UPDATE users SET password_hash=?, salt=?, must_change_password=0, token_epoch=token_epoch+1 WHERE id=?",
+                (pwd, salt, urow["id"]),
+            )
+            conn.execute("UPDATE password_resets SET status='used', used_at=? WHERE id=?", (now(), rec["id"]))
+            conn.execute(
+                "UPDATE password_resets SET status='cancelled' WHERE user_id=? AND status IN ('requested','issued')",
+                (urow["id"],),
+            )
+    if error:
+        raise HTTPException(error[0], error[1])
+    return {"ok": True, "username": username}
+
+
+@app.post("/api/auth/change-password")
+def change_password(body: ChangePasswordIn, user: dict = Depends(get_current_user)):
+    with get_conn() as conn:
+        row = conn.execute("SELECT * FROM users WHERE id=?", (user.get("uid"),)).fetchone()
+        ok = bool(row) and verify_password(body.old_password, row["password_hash"], row["salt"])
+        new_epoch = int(row["token_epoch"] or 0) if ok else 0
+        if ok:
+            new_epoch += 1
+            pwd, salt = hash_password(body.new_password)
+            conn.execute(
+                "UPDATE users SET password_hash=?, salt=?, must_change_password=0, token_epoch=? WHERE id=?",
+                (pwd, salt, new_epoch, row["id"]),
+            )
+        payload = (row["id"], row["username"], row["role"]) if row else (0, "", "user")
+    if not ok:
+        raise HTTPException(400, "当前密码不正确")
+    # 原令牌因 epoch 变化已失效，这里补发一枚新令牌保持当前设备登录态
+    token = create_token(payload[0], payload[1], payload[2], ttl=LOGIN_SHORT_TTL, epoch=new_epoch)
+    return {"ok": True, "token": token}
 
 
 # ---------- users / permissions ----------
@@ -277,6 +498,126 @@ def update_user_perm(user_id: int, body: UserPermIn, user: dict = Depends(requir
     return d
 
 
+# ---------- 管理员：找回密码处理 ----------
+@app.get("/api/admin/password-requests")
+def list_password_requests(
+    include_done: bool = False,
+    user: dict = Depends(require_admin),
+):
+    """待处理的重置申请（status=requested 未发码 / issued 已发码待使用）。"""
+    sql = """
+        SELECT r.id, r.user_id, u.username, r.status, r.attempts, r.expires_at, r.created_at,
+               CASE WHEN r.code_hash = '' THEN 0 ELSE 1 END AS has_code
+          FROM password_resets r JOIN users u ON u.id = r.user_id
+         WHERE r.status IN ('requested','issued') OR ? = 1
+         ORDER BY r.id DESC LIMIT 50
+    """
+    with get_conn() as conn:
+        rows = conn.execute(sql, (1 if include_done else 0,)).fetchall()
+    return {"items": [row_to_dict(r) for r in rows]}
+
+
+@app.post("/api/admin/users/{user_id}/reset-code")
+def admin_issue_reset_code(user_id: int, user: dict = Depends(require_admin)):
+    """为指定用户生成一次性重置码（明文仅返回这一次，库里只存哈希）。"""
+    code = generate_reset_code()
+    code_hash, salt = hash_password(code)
+    expires_at = now() + PASSWORD_RESET_TTL
+    with get_conn() as conn:
+        urow = conn.execute("SELECT id,username FROM users WHERE id=?", (user_id,)).fetchone()
+        if not urow:
+            raise HTTPException(404, "用户不存在")
+        conn.execute(
+            "UPDATE password_resets SET status='cancelled' WHERE user_id=? AND status IN ('requested','issued')",
+            (user_id,),
+        )
+        conn.execute(
+            """INSERT INTO password_resets(user_id,code_hash,salt,status,attempts,expires_at,used_at,created_by,created_at)
+               VALUES(?,?,?,?,?,?,?,?,?)""",
+            (user_id, code_hash, salt, "issued", 0, expires_at, 0, user.get("uid") or 0, now()),
+        )
+        username = urow["username"]
+    return {
+        "ok": True,
+        "username": username,
+        "code": code,
+        "expires_in": PASSWORD_RESET_TTL,
+        "expires_at": expires_at,
+    }
+
+
+@app.post("/api/admin/users/{user_id}/reset-password")
+def admin_reset_password(
+    user_id: int,
+    body: Optional[AdminResetIn] = None,
+    user: dict = Depends(require_admin),
+):
+    """管理员直接置临时密码；下次登录强制改密。"""
+    new_pwd = ((body.new_password if body else "") or "").strip() or generate_reset_code(10)
+    pwd, salt = hash_password(new_pwd)
+    with get_conn() as conn:
+        urow = conn.execute("SELECT id,username FROM users WHERE id=?", (user_id,)).fetchone()
+        if not urow:
+            raise HTTPException(404, "用户不存在")
+        conn.execute(
+            "UPDATE users SET password_hash=?, salt=?, must_change_password=1, token_epoch=token_epoch+1 WHERE id=?",
+            (pwd, salt, user_id),
+        )
+        conn.execute(
+            "UPDATE password_resets SET status='cancelled' WHERE user_id=? AND status IN ('requested','issued')",
+            (user_id,),
+        )
+        username = urow["username"]
+    return {"ok": True, "username": username, "password": new_pwd, "must_change_password": True}
+
+
+# ---------- 管理员：邀请码 ----------
+@app.get("/api/admin/invites")
+def list_invites(user: dict = Depends(require_admin)):
+    with get_conn() as conn:
+        rows = conn.execute(
+            """SELECT i.id, i.code, i.note, i.max_uses, i.used_count, i.expires_at,
+                      i.disabled, i.created_at,
+                      COALESCE((SELECT GROUP_CONCAT(u.username, ', ')
+                                  FROM users u WHERE u.invited_by = i.id), '') AS users
+                 FROM invites i ORDER BY i.id DESC LIMIT 200"""
+        ).fetchall()
+    items = []
+    for r in rows:
+        d = row_to_dict(r)
+        d["disabled"] = bool(d.get("disabled"))
+        d["expired"] = bool(float(d.get("expires_at") or 0)) and float(d["expires_at"]) < now()
+        items.append(d)
+    return {"items": items}
+
+
+@app.post("/api/admin/invites")
+def create_invite(body: InviteIn, user: dict = Depends(require_admin)):
+    code = (body.code or "").strip() or f"SM-{generate_reset_code(4)}-{generate_reset_code(4)}"
+    days = max(0, int(body.expires_in_days or 0))
+    expires_at = now() + days * 86400 if days else 0
+    with get_conn() as conn:
+        if conn.execute("SELECT id FROM invites WHERE code=?", (code,)).fetchone():
+            raise HTTPException(400, "该邀请码已存在，请换一个或留空自动生成")
+        cur = conn.execute(
+            """INSERT INTO invites(code,note,max_uses,used_count,expires_at,disabled,created_by,created_at)
+               VALUES(?,?,?,?,?,?,?,?)""",
+            (code, (body.note or "").strip(), max(0, int(body.max_uses or 0)), 0, expires_at, 0,
+             user.get("uid") or 0, now()),
+        )
+        invite_id = cur.lastrowid
+    return {"ok": True, "id": invite_id, "code": code, "expires_at": expires_at}
+
+
+@app.post("/api/admin/invites/{invite_id}/disable")
+def disable_invite(invite_id: int, user: dict = Depends(require_admin)):
+    with get_conn() as conn:
+        if not conn.execute("SELECT id FROM invites WHERE id=?", (invite_id,)).fetchone():
+            raise HTTPException(404, "邀请码不存在")
+        conn.execute("UPDATE invites SET disabled=1 WHERE id=?", (invite_id,))
+    return {"ok": True, "id": invite_id, "disabled": True}
+
+
 # ---------- docs api ----------
 @app.get("/api/docs")
 def list_docs(user: dict = Depends(get_current_user)):
@@ -298,8 +639,20 @@ async def upload_doc(
     if suffix not in {".md", ".markdown", ".txt", ".docx", ".pdf"}:
         raise HTTPException(400, f"不支持格式: {suffix}")
     dest = UPLOAD_DIR / f"{int(time.time()*1000)}_{filename}"
+    # 边收边数：超过上限立刻中断，不把超大文件完整写进磁盘
+    limit = DOC_MAX_MB * 1024 * 1024
+    written = 0
     with dest.open("wb") as f:
-        shutil.copyfileobj(file.file, f)
+        while True:
+            chunk = await file.read(65536)
+            if not chunk:
+                break
+            written += len(chunk)
+            if written > limit:
+                f.close()
+                dest.unlink(missing_ok=True)
+                raise fail(413, "E_UPLOAD_TOO_LARGE", f"文件过大，上限 {DOC_MAX_MB}MB")
+            f.write(chunk)
 
     try:
         text, meta = parse_document(dest)
@@ -355,7 +708,7 @@ async def upload_doc(
             dest.unlink(missing_ok=True)
         except Exception:
             pass
-        raise HTTPException(500, f"入库失败: {e}")
+        raise fail(500, "E_INGEST", "入库失败，请检查文件内容后重试", exc=e, doc=filename)
 
 
 @app.get("/api/docs/{doc_id}")
@@ -468,7 +821,11 @@ def doc_text(doc_id: int, user: dict = Depends(get_current_user)):
 
 @app.get("/api/docs/{doc_id}/raw")
 def doc_raw(doc_id: int, user: dict = Depends(get_current_user)):
-    """普通用户可读：返回完整源文件原文（完整 md 预览用），附带分块供切换视图。"""
+    """原文预览：有下载权限返回全文，其余用户只给截断预览。
+
+    「能看不能导出」的边界只落在这里。分块正文属于阅读功能本身（/text 同样返回），
+    故不在此处再收窄；该权限降低的是导出成本，不构成保密边界。
+    """
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM documents WHERE id=?", (doc_id,)).fetchone()
         if not row:
@@ -488,6 +845,10 @@ def doc_raw(doc_id: int, user: dict = Depends(get_current_user)):
             content = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
             content = path.read_text(encoding="utf-8", errors="replace")
+    truncated = False
+    if not can_download(user) and len(content) > PREVIEW_CHARS:
+        content = content[:PREVIEW_CHARS]
+        truncated = True
     return {
         "id": row["id"],
         "name": row["name"],
@@ -496,6 +857,8 @@ def doc_raw(doc_id: int, user: dict = Depends(get_current_user)):
         "pages": row["pages"],
         "format": row["format"],
         "content": content,
+        "truncated": truncated,
+        "can_download": can_download(user),
         "chunks": [
             {
                 "idx": c["idx"],
@@ -667,7 +1030,8 @@ def chat(body: ChatIn, user: dict = Depends(get_current_user)):
                     meta = ev["data"]
                 yield f"data: {json.dumps(ev, ensure_ascii=False)}\n\n"
         except Exception as e:
-            err = f"服务异常: {e}"
+            err = "服务异常，请稍后重试"
+            logger.exception("问答流式生成中断 user=%s: %s", user.get("uid"), e)
             tokens.append(err)
             yield f"data: {json.dumps({'type': 'token', 'data': err}, ensure_ascii=False)}\n\n"
         finally:
@@ -697,8 +1061,9 @@ def eval_run(body: EvalIn, user: dict = Depends(get_current_user)):
     latency = int((time.time() - t0) * 1000)
     with get_conn() as conn:
         conn.execute(
-            "INSERT INTO eval_records(question,mode,params_json,answer,sources_json,scores_json,latency_ms,created_at) VALUES(?,?,?,?,?,?,?,?)",
+            "INSERT INTO eval_records(user_id,question,mode,params_json,answer,sources_json,scores_json,latency_ms,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
             (
+                user["uid"],
                 body.question,
                 body.mode,
                 dumps({"top_k": body.top_k}),
@@ -712,10 +1077,7 @@ def eval_run(body: EvalIn, user: dict = Depends(get_current_user)):
     return {"latency_ms": latency, **result}
 
 
-@app.get("/api/eval/list")
-def eval_list(limit: int = Query(50, le=200), user: dict = Depends(get_current_user)):
-    with get_conn() as conn:
-        rows = conn.execute("SELECT * FROM eval_records ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+def _eval_items(rows) -> list[dict]:
     items = []
     for r in rows:
         d = row_to_dict(r)
@@ -723,7 +1085,25 @@ def eval_list(limit: int = Query(50, le=200), user: dict = Depends(get_current_u
         d["scores"] = loads(d.get("scores_json"), {})
         d["params"] = loads(d.get("params_json"), {})
         items.append(d)
-    return {"items": items}
+    return items
+
+
+@app.get("/api/eval/list")
+def eval_list(limit: int = Query(50, le=200), user: dict = Depends(get_current_user)):
+    """只看自己的评测记录；管理员要看全部走 /api/admin/eval/list。"""
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM eval_records WHERE user_id=? ORDER BY id DESC LIMIT ?",
+            (user["uid"], limit),
+        ).fetchall()
+    return {"items": _eval_items(rows)}
+
+
+@app.get("/api/admin/eval/list")
+def admin_eval_list(limit: int = Query(100, le=500), user: dict = Depends(require_admin)):
+    with get_conn() as conn:
+        rows = conn.execute("SELECT * FROM eval_records ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+    return {"items": _eval_items(rows)}
 
 
 @app.get("/api/eval/metrics")
@@ -749,34 +1129,46 @@ def test_questions(limit: int = Query(100, le=200), offset: int = 0, user: dict 
 # ---------- system ----------
 @app.get("/api/health")
 def health():
+    """公开健康检查：只回存活与版本，不暴露路径与内部参数。"""
+    return {"ok": True, "app": APP_NAME, "version": APP_VERSION}
+
+
+@app.get("/api/system/info")
+def system_info(user: dict = Depends(get_current_user)):
+    """需登录的系统信息（设置页展示用）；知识库只回目录名，不回绝对路径。"""
+    with get_conn() as conn:
+        invite_required = _invite_required(conn)
     return {
         "ok": True,
         "app": APP_NAME,
         "version": APP_VERSION,
         "llm_configured": llm_configured(),
         "vector": STORE.stats(),
-        "kb_source": str(KB_SOURCE_DIR),
+        "kb_source": KB_SOURCE_DIR.name,
         "top_k": TOP_K,
         "chunk_size": CHUNK_SIZE,
         "chunk_overlap": CHUNK_OVERLAP,
         "retrieval_mode": RETRIEVAL_MODE,
-        "invite_code_required": bool(REGISTER_INVITE_CODE),
+        "invite_code_required": invite_required,
+        "llm_daily_limit": LLM_DAILY_LIMIT,
     }
 
 
 @app.post("/api/kb/ingest-folder")
-def ingest_folder(
-    path: Optional[str] = None,
-    user: dict = Depends(require_admin),
-):
-    """批量导入文件夹中的 Markdown 知识库。"""
-    root = Path(path) if path else KB_SOURCE_DIR
+def ingest_folder(user: dict = Depends(require_admin)):
+    """批量导入知识库源目录（KB_SOURCE_DIR）下的文档。
+
+    不接受路径参数：本接口会把文件路径登记进 documents.path，而 /api/docs/{id}/raw
+    可据此读取原文，放开任意路径等于把服务器文件系统变成可读出口。
+    """
+    root = KB_SOURCE_DIR.resolve()
     if not root.exists():
-        raise HTTPException(404, f"目录不存在: {root}")
+        raise HTTPException(404, f"知识库目录不存在: {root}")
     files = [p for p in root.rglob("*") if p.suffix.lower() in {".md", ".txt", ".docx", ".pdf"}]
     imported = 0
     skipped = 0
     errors = []
+    pending: list[dict] = []
     for fp in files:
         try:
             text, meta = parse_document(fp)
@@ -805,26 +1197,30 @@ def ingest_folder(
                         (doc_id, c["content"], c.get("section", ""), pages, c["idx"], f"{doc_id}-{c['idx']}",
                          c.get("parent_content", ""), c.get("parent_idx", -1)),
                     )
-            STORE.add(
-                [
-                    {
-                        "content": c["content"],
-                        "doc_id": doc_id,
-                        "doc_name": name,
-                        "section": c.get("section", ""),
-                        "page_hint": pages,
-                        "part": part,
-                        "book": book,
-                        "idx": c["idx"],
-                        "parent_idx": c.get("parent_idx"),
-                        "parent_content": c.get("parent_content", ""),
-                    }
-                    for c in chunks
-                ]
+            pending.extend(
+                {
+                    "content": c["content"],
+                    "doc_id": doc_id,
+                    "doc_name": name,
+                    "section": c.get("section", ""),
+                    "page_hint": pages,
+                    "part": part,
+                    "book": book,
+                    "idx": c["idx"],
+                    "parent_idx": c.get("parent_idx"),
+                    "parent_content": c.get("parent_content", ""),
+                }
+                for c in chunks
             )
             imported += 1
         except Exception as e:
             errors.append(f"{fp.name}: {e}")
+    # 全部文件解析完再一次性写入向量库：避免每篇一次全量重写索引（IO 量 O(N²)）
+    if pending:
+        try:
+            STORE.add(pending)
+        except Exception as e:
+            errors.append(f"向量入库失败: {e}")
     return {"imported": imported, "skipped": skipped, "errors": errors, "root": str(root)}
 
 

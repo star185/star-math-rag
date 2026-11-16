@@ -486,6 +486,7 @@ body {
   background: var(--card); border: 1px solid var(--line); border-radius: 6px; overflow: auto;
 }
 .table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 720px; }
+.table.table-narrow { min-width: 0; }
 .table th, .table td {
   padding: 9px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top;
 }
@@ -1016,6 +1017,91 @@ textarea:focus { outline: none; border-color: var(--accent); }
 .remember-row input[type="checkbox"] {
   width: auto;
   accent-color: var(--accent);
+}
+
+/* ===== 登录：忘记密码入口 ===== */
+.forgot-row {
+  display: flex;
+  justify-content: flex-end;
+  margin: -4px 0 12px;
+}
+.link-btn {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 12.5px;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.link-btn:hover { color: var(--accent-2); }
+
+/* ===== 密码弹窗表单（沿用登录卡片的字段观感） ===== */
+.form-stack label {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+.form-stack input {
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 13px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 14px;
+  outline: none;
+  background: var(--card);
+  color: var(--ink);
+  font-family: var(--font);
+}
+.form-stack input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(32, 80, 122, 0.12);
+}
+.reset-code-out {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px dashed var(--accent);
+  border-radius: 4px;
+  background: var(--accent-soft);
+  font-size: 13px;
+  color: var(--ink);
+}
+.reset-code-out code {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+}
+
+/* ===== 设置页（独立面板） ===== */
+.settings-body { align-content: start; }
+.settings-invite-form { margin-bottom: 10px; }
+.settings-invite-form input {
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--card);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 12.5px;
+  min-width: 170px;
+}
+.settings-invite-form input:focus { outline: none; border-color: var(--accent); }
+.settings-invite-form #invite-uses { min-width: 150px; width: 150px; }
+.invite-code-cell {
+  font-family: var(--mono);
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 /* ===== 检索测试（策略对比） ===== */

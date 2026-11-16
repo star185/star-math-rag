@@ -8,7 +8,13 @@ import re
 import urllib.request
 from pathlib import Path
 
-from .config import OCR_ENGINE, VISION_LLM_API_BASE, VISION_LLM_API_KEY, VISION_LLM_MODEL
+from .config import (
+    MAX_PDF_PAGES,
+    OCR_ENGINE,
+    VISION_LLM_API_BASE,
+    VISION_LLM_API_KEY,
+    VISION_LLM_MODEL,
+)
 
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
 
@@ -97,12 +103,17 @@ def parse_pdf(path: Path) -> str:
         from pypdf import PdfReader
 
         reader = PdfReader(str(path))
+        # 页数上限：全量解析上千页 PDF 会长时间占满 CPU 与内存
+        if len(reader.pages) > MAX_PDF_PAGES:
+            raise RuntimeError(f"PDF 页数 {len(reader.pages)} 超过上限 {MAX_PDF_PAGES}，请拆分后再上传")
         pages = []
         for i, page in enumerate(reader.pages, 1):
             t = page.extract_text() or ""
             if t.strip():
                 pages.append(f"[第{i}页]\n{t}")
         return "\n\n".join(pages)
+    except RuntimeError:
+        raise
     except Exception as e:
         raise RuntimeError(f"PDF 解析失败: {e}")
 

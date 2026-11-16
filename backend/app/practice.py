@@ -11,48 +11,30 @@
 from __future__ import annotations
 
 import json
+import logging
 import random
 import re
 import time
 from pathlib import Path
-from typing import Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 
 from .config import APP_NAME, DATA_DIR
 from .db import get_conn
+from .deps import get_current_user
 from .llm import llm_configured, stream_chat_completion
-from .security import parse_token
+from . import quota
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/practice", tags=["practice"])
 
 QUESTIONS_PATH = DATA_DIR / "test_questions.json"
 
 
-# ---------- 鉴权（与 main.get_current_user 同逻辑，避免循环依赖） ----------
-def current_user(authorization: Optional[str] = Header(None)) -> dict:
-    if not authorization or not authorization.lower().startswith("bearer "):
-        raise HTTPException(status_code=401, detail="未登录")
-    payload = parse_token(authorization.split(" ", 1)[1].strip())
-    if not payload:
-        raise HTTPException(status_code=401, detail="登录已过期")
-    try:
-        with get_conn() as conn:
-            row = conn.execute(
-                "SELECT id,username,role,can_download FROM users WHERE id=?",
-                (payload.get("uid"),),
-            ).fetchone()
-            if row:
-                payload["username"] = row["username"]
-                payload["role"] = row["role"]
-                payload["can_download"] = bool(row["can_download"])
-    except Exception:
-        payload.setdefault("can_download", False)
-    return payload
-
-
+# ---------- 鉴权：统一使用 app/deps.py，避免多份实现漂移 ----------
 def _load_questions() -> list[dict]:
     questions: list[dict] = []
     if QUESTIONS_PATH.exists():
@@ -107,7 +89,7 @@ def paper(
     difficulty: str = "",
     count: int = 5,
     knowledge: str = "",
-    user: dict = Depends(current_user),
+    user: dict = Depends(get_current_user),
 ):
     pool = _load_questions()
     if module:
@@ -166,11 +148,14 @@ def _kw_grade(answer: str, points: list[str]) -> tuple[bool, float]:
     return ratio >= 0.5, round(ratio, 2)
 
 
-@router.post("/grade")
-def grade(body: GradeIn, user: dict = Depends(current_user)):
-    q = _find(body.qid)
+def _grade_answer(q: dict, answer: str, uid: int | None = None) -> dict:
+    """服务端判定：choice/judge 本地比对，short/calc 走 LLM 或关键词。
+
+    grade 与 save 共用这一份逻辑，避免"判分一次、入库一次"两套口径。
+    uid 不为空且真的调用了 LLM 时，占用当日配额。
+    """
     qmode = q.get("mode", "short")
-    answer = (body.answer or "").strip()
+    answer = (answer or "").strip()
 
     # choice / judge：本地比对
     if qmode == "choice":
@@ -197,6 +182,8 @@ def grade(body: GradeIn, user: dict = Depends(current_user)):
     calc_steps = q.get("calc_steps") or []
     if llm_configured():
         try:
+            if uid is not None:
+                quota.consume(uid, cost=1)
             system = (
                 "你是数学判卷助手。请依据参考答案要点判断学生答案是否正确，"
                 "只输出 JSON：{\"correct\":true/false,\"score\":0-1,\"feedback\":\"一句话点评\"}。\n"
@@ -222,13 +209,38 @@ def grade(body: GradeIn, user: dict = Depends(current_user)):
     return {"correct": correct, "score": ratio, "correct_answer": "、".join(points)}
 
 
+# 判分结果短期缓存：save 紧随 grade 时直接复用，避免同一题付两次 LLM 费用
+_GRADE_CACHE_TTL = 1800
+_grade_cache: dict[tuple[int, int], tuple[float, dict]] = {}
+
+
+def _cached_grade(uid: int, q: dict, answer: str) -> dict:
+    key = (uid, int(q.get("id") or 0))
+    hit = _grade_cache.get(key)
+    if hit and time.time() - hit[0] < _GRADE_CACHE_TTL:
+        cached = hit[1]
+        # 只有答案一致时才复用，改了答案必须重判
+        if cached.get("_answer") == (answer or "").strip():
+            return {k: v for k, v in cached.items() if not k.startswith("_")}
+    result = _grade_answer(q, answer, uid=uid)
+    _grade_cache[key] = (time.time(), {**result, "_answer": (answer or "").strip()})
+    return result
+
+
+@router.post("/grade")
+def grade(body: GradeIn, user: dict = Depends(get_current_user)):
+    q = _find(body.qid)
+    result = _cached_grade(user.get("uid"), q, body.answer)
+    return result
+
+
 # ---------- M3 解析 ----------
 class ExplainIn(BaseModel):
     qid: int
 
 
 @router.post("/explain")
-def explain(body: ExplainIn, user: dict = Depends(current_user)):
+def explain(body: ExplainIn, user: dict = Depends(get_current_user)):
     q = _find(body.qid)
     src = q.get("expected_source") or {}
     return {
@@ -257,20 +269,32 @@ class SaveIn(BaseModel):
 
 
 @router.post("/save")
-def save(body: SaveIn, user: dict = Depends(current_user)):
+def save(body: SaveIn, user: dict = Depends(get_current_user)):
+    """保存一次答题记录。
+
+    判分以服务端重算为准（客户端提交的 correct 一律忽略），
+    否则做题记录与错题本可以直接被伪造成"全对"。
+    """
+    q = _find(body.qid)
+    result = _cached_grade(user.get("uid"), q, body.answer)
+    question = q.get("question") or body.question
+    module = q.get("module") or q.get("course") or body.module
+    qtype = q.get("type") or body.qtype
+    difficulty = q.get("difficulty") or body.difficulty
+    mode = q.get("mode") or body.mode
     with get_conn() as conn:
         cur = conn.execute(
             "INSERT INTO practice_records (user_id, qid, question, module, qtype, difficulty, mode, answer, correct, created_at) "
             "VALUES (?,?,?,?,?,?,?,?,?,?)",
-            (user.get("uid"), body.qid, body.question, body.module, body.qtype,
-             body.difficulty, body.mode, body.answer, 1 if body.correct else 0, time.time()),
+            (user.get("uid"), body.qid, question, module, qtype,
+             difficulty, mode, (body.answer or "").strip(), 1 if result["correct"] else 0, time.time()),
         )
         rid = cur.lastrowid
-    return {"id": rid, "saved": True}
+    return {"id": rid, "saved": True, "correct": bool(result["correct"]), "score": result.get("score", 0)}
 
 
 @router.get("/records")
-def records(module: str = "", wrong_only: bool = False, limit: int = 200, user: dict = Depends(current_user)):
+def records(module: str = "", wrong_only: bool = False, limit: int = 200, user: dict = Depends(get_current_user)):
     sql = "SELECT * FROM practice_records WHERE user_id=?"
     args: list = [user.get("uid")]
     if module:
@@ -295,7 +319,7 @@ def records(module: str = "", wrong_only: bool = False, limit: int = 200, user: 
 
 # ---------- M5 导出 ----------
 @router.get("/export")
-def export(module: str = "", wrong_only: bool = False, user: dict = Depends(current_user)):
+def export(module: str = "", wrong_only: bool = False, user: dict = Depends(get_current_user)):
     data = records(module=module, wrong_only=wrong_only, limit=500, user=user)
     recs = data["records"]
     qs = {q.get("id"): q for q in _load_questions()}

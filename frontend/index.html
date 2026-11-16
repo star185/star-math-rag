@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20261103-sig3" />
+  <link rel="stylesheet" href="styles.css?v=20261105-settings" />
   <link rel="stylesheet" href="vendor/katex/katex.min.css" />
   <script defer src="vendor/katex/katex.min.js"></script>
 </head>
@@ -44,8 +44,82 @@
             <label>密码<input id="password" type="password" autocomplete="current-password" placeholder="至少 6 位" required /></label>
             <label id="invite-row" class="hidden">邀请码<input id="invite-code" placeholder="管理员提供的邀请码（如已启用）" /></label>
             <label id="remember-row" class="remember-row"><input type="checkbox" id="remember" /> 记住我（30 天免登录）</label>
+            <div id="forgot-row" class="forgot-row">
+              <button type="button" class="link-btn" id="forgot-link">忘记密码？</button>
+            </div>
             <button type="submit" class="btn primary block" id="login-btn">登录</button>
           </form>
+    </div>
+  </div>
+
+  <!-- 忘记密码：提交找回申请 -->
+  <div id="forgot-modal" class="modal hidden">
+    <div class="modal-mask" data-close-modal="forgot"></div>
+    <div class="modal-card">
+      <div class="modal-head">
+        <div>
+          <div class="preview-title">忘记密码</div>
+          <div class="muted small">提交申请 → 向管理员索取一次性重置码</div>
+        </div>
+        <button class="btn ghost icon" data-close-modal="forgot" title="关闭">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="forgot-form" class="form-stack">
+          <label>用户名<input id="forgot-username" placeholder="请输入注册时的用户名" required /></label>
+          <button type="submit" class="btn primary block" id="forgot-btn">提交申请</button>
+        </form>
+        <div class="hint">
+          管理员会在「设置 → 找回密码」里看到该申请并生成重置码，重置码 10 分钟内有效。
+          已经拿到重置码？<button type="button" class="link-btn" id="to-reset-link">直接去改密码</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 忘记密码：凭重置码设置新密码 -->
+  <div id="reset-modal" class="modal hidden">
+    <div class="modal-mask" data-close-modal="reset"></div>
+    <div class="modal-card">
+      <div class="modal-head">
+        <div>
+          <div class="preview-title">重置密码</div>
+          <div class="muted small">填入管理员提供的一次性重置码</div>
+        </div>
+        <button class="btn ghost icon" data-close-modal="reset" title="关闭">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="reset-form" class="form-stack">
+          <label>用户名<input id="reset-username" autocomplete="username" placeholder="注册时的用户名" required /></label>
+          <label>重置码<input id="reset-code" placeholder="8 位一次性重置码" required /></label>
+          <label>新密码<input id="reset-password" type="password" autocomplete="new-password" placeholder="至少 6 位" required /></label>
+          <label>确认新密码<input id="reset-password2" type="password" autocomplete="new-password" placeholder="再输入一次" required /></label>
+          <button type="submit" class="btn primary block" id="reset-btn">确认重置</button>
+        </form>
+        <div class="hint">重置成功后旧密码与其它设备上的登录状态会立即失效。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 修改密码（管理员重置后的强制改密 / 主动改密） -->
+  <div id="change-pwd-modal" class="modal hidden">
+    <div class="modal-mask" data-close-modal="changePwd"></div>
+    <div class="modal-card">
+      <div class="modal-head">
+        <div>
+          <div class="preview-title">修改密码</div>
+          <div class="muted small" id="change-pwd-sub">更新登录密码</div>
+        </div>
+        <button class="btn ghost icon" data-close-modal="changePwd" title="关闭">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="change-pwd-form" class="form-stack">
+          <label>当前密码<input id="change-old" type="password" autocomplete="current-password" placeholder="当前登录密码" required /></label>
+          <label>新密码<input id="change-new" type="password" autocomplete="new-password" placeholder="至少 6 位" required /></label>
+          <label>确认新密码<input id="change-new2" type="password" autocomplete="new-password" placeholder="再输入一次" required /></label>
+          <button type="submit" class="btn primary block" id="change-pwd-btn">保存</button>
+        </form>
+        <div class="hint" id="change-pwd-hint"></div>
+      </div>
     </div>
   </div>
 
@@ -75,6 +149,9 @@
         </button>
         <button class="nav-item" data-panel="learn">
           <i class="ico" data-lucide="book-open" data-fb="📖"></i> 学习
+        </button>
+        <button class="nav-item" data-panel="settings">
+          <i class="ico" data-lucide="settings" data-fb="⚙"></i> 设置
         </button>
       </nav>
 
@@ -464,24 +541,74 @@
           </div>
         </div>
       </section>
-    </main>
 
-    <!-- 设置弹窗：账号信息 + 用户与下载权限 -->
-    <div id="settings-modal" class="modal hidden">
-      <div class="modal-mask" data-close-modal="settings"></div>
-      <div class="modal-card">
-        <div class="modal-head">
+      <!-- SETTINGS -->
+      <section id="panel-settings" class="panel">
+        <header class="topbar">
           <div>
-            <div class="preview-title">设置</div>
-            <div class="muted small">账号信息 · 用户与下载权限</div>
+            <div class="top-title">设置</div>
+            <div class="muted small">账号 · 邀请码 · 找回密码 · 用户与权限</div>
           </div>
-          <button class="btn ghost icon" data-close-modal="settings" title="关闭">✕</button>
-        </div>
-        <div class="modal-body">
-          <div class="card" style="margin-bottom:12px">
+        </header>
+        <div class="panel-body settings-body">
+          <div id="settings-secret" class="reset-code-out hidden"></div>
+
+          <div class="card">
             <h3>当前账号</h3>
             <div id="settings-account" class="kv"></div>
+            <button class="btn ghost tiny" id="open-change-pwd" style="margin-top:10px">修改密码</button>
           </div>
+
+          <div id="settings-invites-card" class="card hidden">
+            <h3>邀请码</h3>
+            <div class="row settings-invite-form">
+              <input id="invite-note" placeholder="备注（例如：给 2026 届同学）" />
+              <input id="invite-uses" type="number" min="0" placeholder="可用次数（0=不限）" />
+              <select id="invite-days" class="select">
+                <option value="0">不限有效期</option>
+                <option value="7">7 天有效</option>
+                <option value="30">30 天有效</option>
+                <option value="90">90 天有效</option>
+              </select>
+              <button class="btn primary" id="invite-create" type="button">生成邀请码</button>
+            </div>
+            <div class="table-wrap">
+              <table class="table table-narrow">
+                <thead>
+                  <tr>
+                    <th>邀请码</th>
+                    <th>备注</th>
+                    <th>已用</th>
+                    <th>有效期</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="invite-table"></tbody>
+              </table>
+            </div>
+            <div class="muted small" style="margin-top:8px">注册时填写邀请码即可通过；停用后立即失效，鼠标悬停「已用」可看是谁用的。</div>
+          </div>
+
+          <div id="settings-reset-card" class="card hidden">
+            <h3>找回密码申请</h3>
+            <div class="table-wrap">
+              <table class="table table-narrow">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>用户名</th>
+                    <th>状态</th>
+                    <th>申请时间</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="reset-table"></tbody>
+              </table>
+            </div>
+            <div class="muted small" style="margin-top:8px">用户在登录页点「忘记密码」后出现在这里；生成的一次性重置码只显示一次，10 分钟内有效，请自行转交用户。</div>
+          </div>
+
           <div id="settings-users-card" class="card">
             <h3>用户与下载权限</h3>
             <div class="table-wrap">
@@ -501,8 +628,8 @@
             <div class="muted small" style="margin-top:8px">普通用户可浏览知识库；上传/删除/重建仅管理员；下载需授权。</div>
           </div>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
 
     <!-- 通用预览弹窗（知识库分块 / 检索结果原文） -->
     <div id="kb-preview-modal" class="modal hidden">
@@ -524,6 +651,6 @@
   <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
   <script>if (!window.lucide) document.write('<script src="vendor/lucide/lucide.min.js"><\/script>');</script>
   <script>window.lucide && lucide.createIcons();</script>
-  <script src="app.js?v=20261028-tabs"></script>
+  <script src="app.js?v=20261105-settings"></script>
 </body>
 </html>

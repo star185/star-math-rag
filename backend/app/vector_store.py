@@ -7,8 +7,11 @@
 from __future__ import annotations
 
 import json
+import logging
 import math
+import os
 import re
+import threading
 import zlib
 from pathlib import Path
 
@@ -33,6 +36,8 @@ def stable_hash(text: str) -> int:
 INDEX_PATH = VECTOR_DIR / "index.json"
 VEC_PATH = VECTOR_DIR / "vectors.npy"
 VOCAB_PATH = VECTOR_DIR / "vocab.json"
+
+logger = logging.getLogger(__name__)
 
 
 def _ngrams(text: str, n: int = 2) -> list[str]:
@@ -192,6 +197,8 @@ def get_embedder():
 
 class VectorStore:
     def __init__(self):
+        # 全部写操作与状态读取经这把锁；读路径只在锁内取快照，计算在锁外进行
+        self._lock = threading.RLock()
         self.embedder = get_embedder()
         self.meta: list[dict] = []
         self.vectors: np.ndarray = np.zeros((0, getattr(self.embedder, "dim", 384)), dtype=np.float32)
@@ -200,74 +207,147 @@ class VectorStore:
         self.load()
 
     # ---------- persistence ----------
+    def _empty_vectors(self) -> np.ndarray:
+        return np.zeros((0, getattr(self.embedder, "dim", 384)), dtype=np.float32)
+
     def load(self) -> None:
-        if INDEX_PATH.exists() and VEC_PATH.exists():
-            self.meta = json.loads(INDEX_PATH.read_text(encoding="utf-8"))
-            self.vectors = np.load(VEC_PATH)
-        else:
-            self.meta = []
-            self.vectors = np.zeros((0, getattr(self.embedder, "dim", 384)), dtype=np.float32)
-        self._bm25_dirty = True
+        """加载索引。文件缺失/损坏/两份不一致时，以数据库为准重建。"""
+        with self._lock:
+            if not (INDEX_PATH.exists() and VEC_PATH.exists()):
+                self.meta, self.vectors = [], self._empty_vectors()
+                self._bm25_dirty = True
+                return
+            try:
+                meta = json.loads(INDEX_PATH.read_text(encoding="utf-8"))
+                vectors = np.load(VEC_PATH)
+                if not isinstance(meta, list) or vectors.ndim != 2 or len(meta) != vectors.shape[0]:
+                    raise ValueError(
+                        f"索引与向量不一致：meta={len(meta) if isinstance(meta, list) else type(meta).__name__} "
+                        f"vectors={getattr(vectors, 'shape', None)}"
+                    )
+                self.meta = meta
+                self.vectors = np.asarray(vectors, dtype=np.float32)
+                self._bm25_dirty = True
+            except Exception as e:
+                logger.warning("向量库加载失败，改为按数据库重建：%s", e)
+                self.meta, self.vectors = [], self._empty_vectors()
+                self._bm25_dirty = True
+                self.rebuild_from_db()
 
     def save(self) -> None:
-        VECTOR_DIR.mkdir(parents=True, exist_ok=True)
-        INDEX_PATH.write_text(json.dumps(self.meta, ensure_ascii=False), encoding="utf-8")
-        np.save(VEC_PATH, self.vectors)
+        """两个文件先写临时文件再原子替换，避免并发写留下半份索引。"""
+        with self._lock:
+            VECTOR_DIR.mkdir(parents=True, exist_ok=True)
+            idx_tmp = INDEX_PATH.with_name(INDEX_PATH.name + ".tmp")
+            vec_tmp = VEC_PATH.with_name(VEC_PATH.name + ".tmp")
+            with open(idx_tmp, "w", encoding="utf-8") as f:
+                f.write(json.dumps(self.meta, ensure_ascii=False))
+                f.flush()
+                os.fsync(f.fileno())
+            with open(vec_tmp, "wb") as f:
+                np.save(f, self.vectors)  # 传句柄，避免 np.save 自行拼接 .npy 后缀
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(idx_tmp, INDEX_PATH)
+            os.replace(vec_tmp, VEC_PATH)
+
+    def rebuild_from_db(self) -> int:
+        """以 documents/chunks 为准重建索引与向量（索引文件损坏时的兜底路径）。"""
+        from .db import get_conn
+
+        with self._lock:
+            try:
+                with get_conn() as conn:
+                    rows = conn.execute(
+                        "SELECT c.*, d.name AS doc_name, d.part AS part, d.book AS book "
+                        "FROM chunks c JOIN documents d ON d.id = c.doc_id ORDER BY c.doc_id, c.idx"
+                    ).fetchall()
+            except Exception as e:
+                logger.error("按数据库重建向量库失败：%s", e)
+                return 0
+            items = []
+            for r in rows:
+                keys = r.keys()
+                items.append(
+                    {
+                        "content": r["content"] or "",
+                        "doc_id": r["doc_id"],
+                        "doc_name": r["doc_name"] or "",
+                        "section": r["section"] or "",
+                        "page_hint": r["page_hint"] or "",
+                        "part": r["part"] or "",
+                        "book": r["book"] or "",
+                        "idx": r["idx"],
+                        "parent_content": (r["parent_content"] or "") if "parent_content" in keys else "",
+                        "parent_idx": (r["parent_idx"] if "parent_idx" in keys else -1) or -1,
+                    }
+                )
+            texts = [it["content"] for it in items]
+            self.meta = items
+            self.vectors = self.embedder.encode_batch(texts) if items else self._empty_vectors()
+            self._bm25_dirty = True
+            self.save()
+            logger.info("向量库已按数据库重建：%d 片段", len(items))
+            return len(items)
 
     def clear(self) -> None:
-        self.meta = []
-        self.vectors = np.zeros((0, getattr(self.embedder, "dim", 384)), dtype=np.float32)
-        self._bm25_dirty = True
-        self.save()
+        with self._lock:
+            self.meta = []
+            self.vectors = self._empty_vectors()
+            self._bm25_dirty = True
+            self.save()
 
     def add(self, items: list[dict]) -> int:
         """items: [{content, doc_id, doc_name, section, page_hint, parent_content?, parent_idx?, ...}]"""
         if not items:
             return 0
-        texts = [it["content"] for it in items]
-        vecs = self.embedder.encode_batch(texts)
-        if self.vectors.size == 0:
-            self.vectors = vecs
-        else:
-            self.vectors = np.vstack([self.vectors, vecs])
-        for it in items:
-            self.meta.append(it)
-        self._bm25_dirty = True
-        self.save()
-        return len(items)
+        with self._lock:
+            texts = [it["content"] for it in items]
+            vecs = self.embedder.encode_batch(texts)
+            self.vectors = vecs if self.vectors.size == 0 else np.vstack([self.vectors, vecs])
+            # 整体替换列表而非原地 append：读路径持有的旧快照不会看到长度突变
+            self.meta = self.meta + list(items)
+            self._bm25_dirty = True
+            self.save()
+            return len(items)
 
     def delete_by_doc(self, doc_id: int) -> int:
-        if not self.meta:
-            return 0
-        keep_idx = [i for i, m in enumerate(self.meta) if int(m.get("doc_id", -1)) != int(doc_id)]
-        removed = len(self.meta) - len(keep_idx)
-        self.meta = [self.meta[i] for i in keep_idx]
-        if keep_idx:
-            self.vectors = self.vectors[keep_idx]
-        else:
-            self.vectors = np.zeros((0, getattr(self.embedder, "dim", 384)), dtype=np.float32)
-        self._bm25_dirty = True
-        self.save()
-        return removed
+        with self._lock:
+            if not self.meta:
+                return 0
+            keep_idx = [i for i, m in enumerate(self.meta) if int(m.get("doc_id", -1)) != int(doc_id)]
+            removed = len(self.meta) - len(keep_idx)
+            self.meta = [self.meta[i] for i in keep_idx]
+            self.vectors = self.vectors[keep_idx] if keep_idx else self._empty_vectors()
+            self._bm25_dirty = True
+            self.save()
+            return removed
 
     # ---------- BM25 ----------
     def _ensure_bm25(self) -> None:
-        if self._bm25_dirty:
-            self.bm25.build(self.meta)
-            self._bm25_dirty = False
+        # 重建到新对象再整体替换：并发查询手里持有的旧索引不会被就地改写
+        with self._lock:
+            if self._bm25_dirty:
+                idx = BM25Index(k1=BM25_K1, b=BM25_B)
+                idx.build(self.meta)
+                self.bm25 = idx
+                self._bm25_dirty = False
 
     def _bm25_search(self, query: str, top_k: int, part: str | None = None, doc_id: int | None = None) -> list[dict]:
         self._ensure_bm25()
+        with self._lock:
+            bm25 = self.bm25
+            meta = self.meta
         toks = _tokenize(query)
-        if not toks or not self.bm25.built:
+        if not toks or not bm25.built:
             return []
-        scores = self.bm25.score(toks)
+        scores = bm25.score(toks)
         # 标题加权：卡片正文以 LaTeX 为主、术语集中在标题。
         # 概念卡 BM25 底分往往低于中文密集的反例集/地图卡，此处加权保证概念卡进入融合候选。
         q_terms = self._query_terms_local(query)
         exact_idx: set[int] = set()
         if q_terms:
-            for i, m in enumerate(self.meta):
+            for i, m in enumerate(meta):
                 doc_name = m.get("doc_name") or ""
                 card = re.sub(r"^\d+_[^·]+·", "", doc_name)
                 boost = 0.0
@@ -288,7 +368,7 @@ class VectorStore:
         for i in order:
             if scores[i] <= 0:
                 break
-            m = self.meta[int(i)]
+            m = meta[int(i)]
             if part and m.get("part") != part:
                 continue
             if doc_id is not None and int(m.get("doc_id", -1)) != int(doc_id):
@@ -300,18 +380,24 @@ class VectorStore:
 
     # ---------- vector ----------
     def _vector_search(self, query: str, top_k: int, part: str | None = None, doc_id: int | None = None) -> list[dict]:
-        if not self.meta:
+        with self._lock:
+            meta = self.meta
+            vectors = self.vectors
+        if not meta:
             return []
         q = self.embedder.encode(query)
-        if self.vectors.shape[1] != q.shape[0]:
+        if vectors.shape[1] != q.shape[0]:
             self.rebuild()
-            if self.vectors.shape[1] != q.shape[0]:
+            with self._lock:
+                meta = self.meta
+                vectors = self.vectors
+            if vectors.shape[1] != q.shape[0]:
                 return []
-        scores = np.asarray(self.vectors @ q, dtype=np.float32).reshape(-1)
+        scores = np.asarray(vectors @ q, dtype=np.float32).reshape(-1)
 
         # 标题/章节加权：查询关键词命中 meta 字段则加分
         q_terms = self._query_terms_local(query)
-        for i, m in enumerate(self.meta):
+        for i, m in enumerate(meta):
             hay = f"{m.get('doc_name','')} {m.get('section','')} {m.get('title','')}"
             bonus = 0.0
             for t in q_terms:
@@ -326,7 +412,7 @@ class VectorStore:
         order = np.argsort(-scores)
         out = []
         for i in order:
-            m = self.meta[int(i)]
+            m = meta[int(i)]
             if part and m.get("part") != part:
                 continue
             if doc_id is not None and int(m.get("doc_id", -1)) != int(doc_id):
@@ -431,17 +517,21 @@ class VectorStore:
         return self._boost_title(merged, query, mode)[:top_k]
 
     def rebuild(self) -> None:
-        """用现有 meta.content 重新编码。"""
-        texts = [m.get("content", "") for m in self.meta]
-        self.vectors = self.embedder.encode_batch(texts) if texts else np.zeros((0, getattr(self.embedder, "dim", 384)), dtype=np.float32)
-        self._bm25_dirty = True
-        self.save()
+        """用现有 meta.content 重新编码（meta 与向量维度不匹配时使用）。"""
+        with self._lock:
+            texts = [m.get("content", "") for m in self.meta]
+            self.vectors = self.embedder.encode_batch(texts) if texts else self._empty_vectors()
+            self._bm25_dirty = True
+            self.save()
 
     def stats(self) -> dict:
+        with self._lock:
+            meta = self.meta
+            vectors = self.vectors
         return {
-            "chunks": len(self.meta),
-            "docs": len({m.get("doc_id") for m in self.meta}),
-            "dim": int(self.vectors.shape[1]) if self.vectors.size else getattr(self.embedder, "dim", 0),
+            "chunks": len(meta),
+            "docs": len({m.get("doc_id") for m in meta}),
+            "dim": int(vectors.shape[1]) if vectors.size else getattr(self.embedder, "dim", 0),
             "embedder": type(self.embedder).__name__,
             "retrieval_mode": RETRIEVAL_MODE,
         }

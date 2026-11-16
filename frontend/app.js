@@ -90,6 +90,9 @@ function showApp() {
   applyRoleUI();
   loadConversations();
   loadHealth();
+  // 刷新/深链接：#settings 之类的 hash 直接落到对应面板
+  const hashPanel = location.hash.replace("#", "");
+  if (PANEL_NAMES.includes(hashPanel) && hashPanel !== "chat") showPanel(hashPanel);
 }
 
 function applyRoleUI() {
@@ -111,9 +114,21 @@ function applyRoleUI() {
     if (admin) userCard.classList.remove("hidden");
     else userCard.classList.add("hidden");
   }
+  const resetCard = $("#settings-reset-card");
+  if (resetCard) {
+    if (admin) resetCard.classList.remove("hidden");
+    else resetCard.classList.add("hidden");
+  }
+  const invitesCard = $("#settings-invites-card");
+  if (invitesCard) {
+    if (admin) invitesCard.classList.remove("hidden");
+    else invitesCard.classList.add("hidden");
+  }
+  const secretBox = $("#settings-secret");
+  if (secretBox && !admin) secretBox.classList.add("hidden");
   const settingsBtn = $("#settings-btn");
   if (settingsBtn) {
-    settingsBtn.title = admin ? "设置（用户与下载权限）" : "设置";
+    settingsBtn.title = admin ? "设置（邀请码 / 用户 / 找回密码）" : "设置";
   }
   const roleBar = $("#kb-role-bar");
   if (roleBar) {
@@ -142,6 +157,12 @@ function logout(show = true) {
   state.conversationId = null;
   localStorage.removeItem("rag_token");
   localStorage.removeItem("rag_user");
+  // 清空登录表单，避免下一个用户看到上一个人的用户名（找回密码预填也会跟着错）
+  ["#username", "#password", "#invite-code"].forEach((sel) => {
+    const el = $(sel);
+    if (el) el.value = "";
+  });
+  $$(".modal").forEach((m) => m.classList.add("hidden"));
   if (show) showLogin();
 }
 
@@ -165,6 +186,7 @@ $("#login-form").addEventListener("submit", async (e) => {
     });
     state.token = data.token;
     state.user = data.user;
+    const mustChangePwd = !isRegister && !!(data.user && data.user.must_change_password);
     // 同步权限
     try {
       const me = await api("/api/me");
@@ -183,6 +205,7 @@ $("#login-form").addEventListener("submit", async (e) => {
     localStorage.setItem("rag_user", JSON.stringify(state.user));
     toast(isRegister ? "注册成功" : "登录成功");
     showApp();
+    if (mustChangePwd) openChangePwd(true);
   } catch (err) {
     toast(err.message);
   } finally {
@@ -197,9 +220,10 @@ $$(".tab").forEach((tab) => {
     tab.classList.add("active");
     const isRegister = tab.dataset.tab === "register";
     $("#login-btn").textContent = isRegister ? "注册" : "登录";
-    // 注册显示邀请码，登录显示记住我
+    // 注册显示邀请码，登录显示记住我 + 忘记密码
     $("#invite-row").classList.toggle("hidden", !isRegister);
     $("#remember-row").classList.toggle("hidden", isRegister);
+    $("#forgot-row").classList.toggle("hidden", isRegister);
     // 切换标签时清空输入，避免残留内容误提交
     $("#username").value = "";
     $("#password").value = "";
@@ -212,8 +236,159 @@ $("#logout").addEventListener("click", () => {
   toast("已退出");
 });
 
-/* ---------- 设置弹窗（左下角设置图标） ---------- */
-function openSettings() {
+/* ---------- 忘记密码 / 修改密码 ---------- */
+function openModal(sel) {
+  const el = $(sel);
+  if (el) el.classList.remove("hidden");
+}
+
+function closeModal(sel) {
+  const el = $(sel);
+  if (el) el.classList.add("hidden");
+}
+
+/** 管理员重置 / 发码后的敏感信息展示，只显示一次 */
+function showSecret(label, value, note = "") {
+  const box = $("#settings-secret");
+  if (!box) return;
+  box.innerHTML = `
+    <div>
+      <div>${escapeHtml(label)}</div>
+      <div class="muted small">${escapeHtml(note)}</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <code>${escapeHtml(value)}</code>
+      <button class="btn ghost tiny" id="copy-secret">复制</button>
+    </div>`;
+  box.classList.remove("hidden");
+  const btn = $("#copy-secret");
+  if (btn) {
+    btn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(value);
+        toast("已复制");
+      } catch {
+        toast("复制失败，请手动选中复制");
+      }
+    });
+  }
+}
+
+function openChangePwd(forced = false) {
+  $("#change-pwd-sub").textContent = forced
+    ? "管理员已重置你的密码，请设置新密码"
+    : "更新登录密码";
+  $("#change-pwd-hint").textContent = forced
+    ? "建议立即修改为只有你知道的密码。"
+    : "修改后其它设备上的登录状态会立即失效。";
+  $("#change-old").value = "";
+  $("#change-new").value = "";
+  $("#change-new2").value = "";
+  openModal("#change-pwd-modal");
+  $("#change-old").focus();
+}
+
+$("#forgot-link").addEventListener("click", () => {
+  $("#forgot-username").value = ($("#username").value || "").trim();
+  openModal("#forgot-modal");
+  $("#forgot-username").focus();
+});
+
+$("#to-reset-link").addEventListener("click", () => {
+  $("#reset-username").value = ($("#forgot-username").value || $("#username").value || "").trim();
+  closeModal("#forgot-modal");
+  openModal("#reset-modal");
+  $("#reset-code").focus();
+});
+
+$("#forgot-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const username = $("#forgot-username").value.trim();
+  const btn = $("#forgot-btn");
+  btn.disabled = true;
+  btn.textContent = "提交中…";
+  try {
+    const data = await api("/api/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ username }),
+    });
+    closeModal("#forgot-modal");
+    $("#reset-username").value = username;
+    toast(data.message || "已提交申请，请联系管理员");
+  } catch (err) {
+    toast(err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "提交申请";
+  }
+});
+
+$("#reset-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const pwd = $("#reset-password").value;
+  if (pwd !== $("#reset-password2").value) {
+    toast("两次输入的新密码不一致");
+    return;
+  }
+  const username = $("#reset-username").value.trim();
+  const btn = $("#reset-btn");
+  btn.disabled = true;
+  btn.textContent = "重置中…";
+  try {
+    const data = await api("/api/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ username, code: $("#reset-code").value.trim(), new_password: pwd }),
+    });
+    closeModal("#reset-modal");
+    $("#username").value = data.username || username;
+    $("#reset-code").value = "";
+    $("#reset-password").value = "";
+    $("#reset-password2").value = "";
+    $("#password").value = "";
+    toast("密码已重置，请用新密码登录");
+    $("#password").focus();
+  } catch (err) {
+    toast(err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "确认重置";
+  }
+});
+
+$("#open-change-pwd").addEventListener("click", () => openChangePwd(false));
+
+$("#change-pwd-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const pwd = $("#change-new").value;
+  if (pwd !== $("#change-new2").value) {
+    toast("两次输入的新密码不一致");
+    return;
+  }
+  const btn = $("#change-pwd-btn");
+  btn.disabled = true;
+  btn.textContent = "保存中…";
+  try {
+    const data = await api("/api/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({ old_password: $("#change-old").value, new_password: pwd }),
+    });
+    // 改密后 epoch 自增使旧令牌失效，后端补发新令牌，这里换成本机的
+    if (data.token) {
+      state.token = data.token;
+      localStorage.setItem("rag_token", data.token);
+    }
+    closeModal("#change-pwd-modal");
+    toast("密码已更新");
+  } catch (err) {
+    toast(err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "保存";
+  }
+});
+
+/* ---------- 设置页（一级面板，深链接 #settings） ---------- */
+function refreshSettings() {
   const acc = $("#settings-account");
   if (acc && state.user) {
     acc.innerHTML = `
@@ -222,36 +397,65 @@ function openSettings() {
       <li><span>下载权限</span><b>${canDownload() ? "可下载" : "无下载权限"}</b></li>
       <li><span>登录方式</span><b>${localStorage.getItem("rag_token") ? "已登录（本机记住）" : "未登录"}</b></li>`;
   }
-  loadUsers();
-  $("#settings-modal").classList.remove("hidden");
+  applyRoleUI();
+  if (isAdmin()) {
+    loadUsers();
+    loadResetRequests();
+    loadInvites();
+  }
+}
+
+function openSettings() {
+  showPanel("settings");
 }
 
 $("#settings-btn").addEventListener("click", openSettings);
 
 $$("[data-close-modal]").forEach((el) =>
   el.addEventListener("click", () => {
-    const map = { settings: "#settings-modal", preview: "#kb-preview-modal" };
+    const map = {
+      preview: "#kb-preview-modal",
+      forgot: "#forgot-modal",
+      reset: "#reset-modal",
+      changePwd: "#change-pwd-modal",
+    };
     const target = $(map[el.dataset.closeModal]);
     if (target) target.classList.add("hidden");
   })
 );
 
 /* ---------- panels ---------- */
+const PANEL_NAMES = ["chat", "kb", "eval", "practice", "learn", "settings"];
+
+function activePanelName() {
+  const p = $(".panel.active");
+  return p ? p.id.replace("panel-", "") : "chat";
+}
+
+function showPanel(name) {
+  if (!PANEL_NAMES.includes(name)) name = "chat";
+  $$(".nav-item").forEach((b) => b.classList.toggle("active", b.dataset.panel === name));
+  $$(".panel").forEach((p) => p.classList.toggle("active", p.id === `panel-${name}`));
+  // replaceState 而非赋 hash：URL 可深链接/刷新可恢复，又不会触发 hashchange 造成重复加载
+  if (location.hash !== `#${name}`) history.replaceState(null, "", `#${name}`);
+  if (name === "kb") {
+    applyRoleUI();
+    loadDocs();
+  }
+  if (name === "eval") loadEvalConfig();
+  if (name === "practice") loadPracticePanel();
+  if (name === "learn") loadExercisePanel();
+  if (name === "settings") refreshSettings();
+}
+
 $$(".nav-item").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    $$(".nav-item").forEach((b) => b.classList.remove("active"));
-    btn.classList.add("active");
-    const panel = btn.dataset.panel;
-    $$(".panel").forEach((p) => p.classList.remove("active"));
-    $(`#panel-${panel}`).classList.add("active");
-    if (panel === "kb") {
-      applyRoleUI();
-      loadDocs();
-    }
-    if (panel === "eval") loadEvalConfig();
-    if (panel === "practice") loadPracticePanel();
-    if (panel === "learn") loadExercisePanel();
-  });
+  btn.addEventListener("click", () => showPanel(btn.dataset.panel));
+});
+
+// 浏览器前进/后退（replaceState 不触发，只有用户操作历史时走到这里）
+window.addEventListener("hashchange", () => {
+  const name = location.hash.replace("#", "") || "chat";
+  if (name !== activePanelName()) showPanel(name);
 });
 
 /* 检索测试折叠卡片 */
@@ -793,6 +997,7 @@ function previewSubText(src) {
     src.section,
     src.page_hint ? `p.${src.page_hint}` : "",
     src.score != null ? `相似度 ${Number(src.score).toFixed(3)}` : "",
+    src.truncated ? "预览已截断，完整原文需下载权限" : "",
   ]
     .filter(Boolean)
     .join(" · ");
@@ -965,7 +1170,7 @@ async function loadKbForTopic(topic, btn, docId) {
     const raw = await rawResp.json();
     $("#preview-title").textContent = raw.name || topic;
     $("#preview-sub").textContent = `知识点：${topic}`;
-    openPreview({ doc_name: raw.name, section: topic, content: raw.content, chunks: raw.chunks });
+    openPreview({ doc_name: raw.name, section: topic, content: raw.content, chunks: raw.chunks, truncated: raw.truncated });
   } catch (err) {
     $("#preview-sub").textContent = "加载失败";
     body.innerHTML = '<div class="muted" style="padding:16px">加载失败：' + escapeHtml(err.message) + "</div>";
@@ -1323,7 +1528,7 @@ if (previewClose) previewClose.addEventListener("click", closePreview);
 /* ---------- health / KB ---------- */
 async function loadHealth() {
   try {
-    const h = await api("/api/health");
+    const h = await api("/api/system/info");
     $("#eval-config").innerHTML = `
       <li><span>向量库</span><b>${h.vector.chunks} 片段 / ${h.vector.docs} 文档</b></li>
       <li><span>Embedder</span><b>${escapeHtml(h.vector.embedder)}</b></li>
@@ -1402,6 +1607,7 @@ async function loadDocs() {
             section: `${d.part || ""} ${d.book || ""}`.trim(),
             page_hint: d.pages || "",
             content: d.content || "",
+            truncated: d.truncated,
             chunks: (d.chunks || []).map((c) => ({
               idx: c.idx,
               section: c.section || "",
@@ -1465,6 +1671,7 @@ async function loadUsers() {
             <button class="btn ghost tiny" data-toggle-dl="${u.id}" data-val="${u.can_download ? 0 : 1}">
               ${u.can_download ? "取消下载" : "授予下载"}
             </button>
+            <button class="btn ghost tiny" data-reset-pwd="${u.id}" data-name="${escapeHtml(u.username)}">重置密码</button>
             ${u.role !== "admin" ? `<button class="btn ghost tiny" data-promote="${u.id}">设为管理员</button>` : ""}
           </div>
         </td>
@@ -1500,10 +1707,171 @@ async function loadUsers() {
         }
       })
     );
+    box.querySelectorAll("[data-reset-pwd]").forEach((btn) =>
+      btn.addEventListener("click", async () => {
+        const name = btn.dataset.name || "";
+        if (!confirm(`把「${name}」的密码重置为随机临时密码？对方下次登录需强制改密。`)) return;
+        try {
+          const data = await api(`/api/admin/users/${btn.dataset.resetPwd}/reset-password`, {
+            method: "POST",
+            body: JSON.stringify({}),
+          });
+          showSecret(
+            `已重置「${data.username}」的密码，临时密码：`,
+            data.password,
+            "只显示这一次，请转交本人；对方登录后会被要求立即修改。"
+          );
+          toast("已重置密码");
+        } catch (e) {
+          toast(e.message);
+        }
+      })
+    );
   } catch (e) {
     toast(e.message);
   }
 }
+
+const RESET_STATUS_TEXT = {
+  requested: "待发码",
+  issued: "已发码",
+  used: "已使用",
+  expired: "已过期",
+  cancelled: "已取消",
+  locked: "已锁定",
+};
+
+async function loadResetRequests() {
+  if (!isAdmin()) return;
+  const box = $("#reset-table");
+  if (!box) return;
+  try {
+    const data = await api("/api/admin/password-requests");
+    const items = data.items || [];
+    if (!items.length) {
+      box.innerHTML = '<tr><td colspan="5" class="muted small">暂无找回密码申请</td></tr>';
+      return;
+    }
+    box.innerHTML = items
+      .map(
+        (r) => `
+      <tr>
+        <td>${r.id}</td>
+        <td>${escapeHtml(r.username)}</td>
+        <td><span class="perm-chip ${r.status === "issued" ? "on" : "off"}">${RESET_STATUS_TEXT[r.status] || r.status}</span></td>
+        <td>${new Date((r.created_at || 0) * 1000).toLocaleString("zh-CN")}</td>
+        <td>
+          <div class="actions">
+            <button class="btn ghost tiny" data-issue-code="${r.user_id}" data-name="${escapeHtml(r.username)}">生成重置码</button>
+          </div>
+        </td>
+      </tr>`
+      )
+      .join("");
+    box.querySelectorAll("[data-issue-code]").forEach((btn) =>
+      btn.addEventListener("click", async () => {
+        try {
+          const data = await api(`/api/admin/users/${btn.dataset.issueCode}/reset-code`, { method: "POST" });
+          showSecret(
+            `「${data.username}」的一次性重置码：`,
+            data.code,
+            `有效期 ${Math.round((data.expires_in || 0) / 60)} 分钟，只显示这一次；请转交本人，由其在登录页「忘记密码 → 直接去改密码」中使用。`
+          );
+          loadResetRequests();
+        } catch (e) {
+          toast(e.message);
+        }
+      })
+    );
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+async function loadInvites() {
+  if (!isAdmin()) return;
+  const box = $("#invite-table");
+  if (!box) return;
+  try {
+    const data = await api("/api/admin/invites");
+    const items = data.items || [];
+    if (!items.length) {
+      box.innerHTML = '<tr><td colspan="6" class="muted small">还没有邀请码，用上方「生成邀请码」创建</td></tr>';
+      return;
+    }
+    box.innerHTML = items
+      .map((inv) => {
+        const status = inv.disabled ? "已停用" : inv.expired ? "已过期" : "可用";
+        const chip = inv.disabled || inv.expired ? "off" : "on";
+        const uses = inv.max_uses ? `${inv.used_count} / ${inv.max_uses}` : `${inv.used_count} / 不限`;
+        const exp = inv.expires_at ? new Date(inv.expires_at * 1000).toLocaleDateString("zh-CN") : "不限";
+        return `
+      <tr>
+        <td class="invite-code-cell">${escapeHtml(inv.code)}</td>
+        <td>${escapeHtml(inv.note || "—")}</td>
+        <td title="${escapeHtml(inv.users || "尚无使用者")}">${uses}</td>
+        <td>${exp}</td>
+        <td><span class="perm-chip ${chip}">${status}</span></td>
+        <td>
+          <div class="actions">
+            <button class="btn ghost tiny" data-copy-invite="${escapeHtml(inv.code)}">复制</button>
+            ${inv.disabled ? "" : `<button class="btn ghost tiny" data-disable-invite="${inv.id}">停用</button>`}
+          </div>
+        </td>
+      </tr>`;
+      })
+      .join("");
+    box.querySelectorAll("[data-copy-invite]").forEach((btn) =>
+      btn.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(btn.dataset.copyInvite);
+          toast("邀请码已复制");
+        } catch {
+          toast("复制失败，请手动选中复制");
+        }
+      })
+    );
+    box.querySelectorAll("[data-disable-invite]").forEach((btn) =>
+      btn.addEventListener("click", async () => {
+        if (!confirm("停用后该邀请码立即失效，确定？")) return;
+        try {
+          await api(`/api/admin/invites/${btn.dataset.disableInvite}/disable`, { method: "POST" });
+          toast("已停用");
+          loadInvites();
+        } catch (e) {
+          toast(e.message);
+        }
+      })
+    );
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+$("#invite-create").addEventListener("click", async () => {
+  const btn = $("#invite-create");
+  btn.disabled = true;
+  btn.textContent = "生成中…";
+  try {
+    const data = await api("/api/admin/invites", {
+      method: "POST",
+      body: JSON.stringify({
+        note: $("#invite-note").value.trim(),
+        max_uses: Number($("#invite-uses").value || 0),
+        expires_in_days: Number($("#invite-days").value || 0),
+      }),
+    });
+    showSecret("新邀请码（只显示一次，请复制保存）：", data.code, "把它发给同学，注册时填在「邀请码」栏即可。");
+    $("#invite-note").value = "";
+    $("#invite-uses").value = "";
+    loadInvites();
+  } catch (e) {
+    toast(e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "生成邀请码";
+  }
+});
 
 $("#upload-btn").addEventListener("click", () => $("#file-input").click());
 $("#file-input").addEventListener("change", async (e) => {

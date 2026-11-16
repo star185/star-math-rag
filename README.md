@@ -56,12 +56,27 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-复制 `backend/env.example` 为 `backend/.env` 并填入模型配置（不填则运行在本地抽取模式，仍可完整演示问答与检索）：
+模型密钥支持两种放法（优先级：进程环境变量 > 用户级密钥文件 > 项目内 `.env`）：
 
-```
-LLM_API_BASE=https://api.deepseek.com/v1
-LLM_API_KEY=sk-...
-LLM_MODEL=deepseek-chat
+- **推荐**：把密钥写进项目目录之外的文件，打包/分发源码时不会连带流出。
+  Windows 为 `%APPDATA%\StarMath\.env`，Linux/macOS 为 `~/.config/star-math/.env`；也可用环境变量 `STAR_MATH_ENV_FILE` 指向任意 `.env`。该文件只需三行：
+
+  ```
+  LLM_API_KEY=sk-...
+  VISION_LLM_API_KEY=sk-...
+  LLM_API_BASE=https://api.deepseek.com/v1
+  LLM_MODEL=deepseek-chat
+  ```
+
+- **快速试跑**：直接复制 `backend/env.example` 为 `backend/.env` 填写也行。密钥留空则运行在本地抽取模式，仍可完整演示问答与检索。
+
+需要提交或外发源码时，用打包脚本生成制品，它会自动排除 `.env*`、数据库、向量库与开发残留：
+
+```bash
+cd backend
+python scripts/make_delivery.py              # 安全默认：不含密钥与本机数据
+python scripts/make_delivery.py --with-data  # 连 app.db 与向量库一起打包，方便对方直接演示
+python scripts/make_delivery.py --list       # 只打印将打包/排除的清单
 ```
 
 导入知识库并启动：

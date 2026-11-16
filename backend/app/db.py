@@ -18,8 +18,40 @@ CREATE TABLE IF NOT EXISTS users (
   salt TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'user',
   can_download INTEGER NOT NULL DEFAULT 0,
+  email TEXT NOT NULL DEFAULT '',
+  must_change_password INTEGER NOT NULL DEFAULT 0,
+  token_epoch INTEGER NOT NULL DEFAULT 0,
+  invited_by INTEGER NOT NULL DEFAULT 0,
   created_at REAL NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS invites (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  code TEXT NOT NULL UNIQUE,
+  note TEXT NOT NULL DEFAULT '',
+  max_uses INTEGER NOT NULL DEFAULT 0,
+  used_count INTEGER NOT NULL DEFAULT 0,
+  expires_at REAL NOT NULL DEFAULT 0,
+  disabled INTEGER NOT NULL DEFAULT 0,
+  created_by INTEGER NOT NULL DEFAULT 0,
+  created_at REAL NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS password_resets (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  code_hash TEXT NOT NULL DEFAULT '',
+  salt TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'requested',
+  attempts INTEGER NOT NULL DEFAULT 0,
+  expires_at REAL NOT NULL DEFAULT 0,
+  used_at REAL NOT NULL DEFAULT 0,
+  created_by INTEGER NOT NULL DEFAULT 0,
+  created_at REAL NOT NULL,
+  FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_password_resets_user ON password_resets(user_id, status);
 
 CREATE TABLE IF NOT EXISTS documents (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -72,6 +104,7 @@ CREATE TABLE IF NOT EXISTS messages (
 
 CREATE TABLE IF NOT EXISTS eval_records (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL DEFAULT 0,
   question TEXT NOT NULL,
   mode TEXT NOT NULL,
   params_json TEXT DEFAULT '{}',
@@ -80,6 +113,13 @@ CREATE TABLE IF NOT EXISTS eval_records (
   scores_json TEXT DEFAULT '{}',
   latency_ms INTEGER DEFAULT 0,
   created_at REAL NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS llm_usage (
+  user_id INTEGER NOT NULL,
+  day TEXT NOT NULL,
+  count INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (user_id, day)
 );
 
 CREATE TABLE IF NOT EXISTS practice_records (
@@ -147,9 +187,20 @@ def get_conn() -> Iterator[sqlite3.Connection]:
         conn.close()
 
 
+def _add_column(conn: sqlite3.Connection, table: str, column: str, ddl: str) -> None:
+    """列不存在才加：吞掉"已存在"，其余异常（锁冲突/磁盘满）照常抛出。"""
+    cols = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+    if column in cols:
+        return
+    conn.execute(ddl)
+
+
 def init_db() -> None:
     with get_conn() as conn:
         conn.executescript(SCHEMA)
+        # 兼容旧库：评估记录按用户隔离（P1-8）
+        _add_column(conn, "eval_records", "user_id",
+                    "ALTER TABLE eval_records ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0")
         # 兼容旧库：父子分块新增列（已存在时忽略）
         try:
             conn.execute("ALTER TABLE chunks ADD COLUMN parent_content TEXT DEFAULT ''")
@@ -164,6 +215,17 @@ def init_db() -> None:
             conn.execute("ALTER TABLE exercise_sources ADD COLUMN questions_json TEXT DEFAULT '[]'")
         except Exception:
             pass
+        # 兼容旧库：找回密码相关列（email 仅预留；token_epoch 用于改密后作废旧令牌）
+        for ddl in (
+            "ALTER TABLE users ADD COLUMN email TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN token_epoch INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN invited_by INTEGER NOT NULL DEFAULT 0",
+        ):
+            try:
+                conn.execute(ddl)
+            except Exception:
+                pass
 
 
 def now() -> float:
